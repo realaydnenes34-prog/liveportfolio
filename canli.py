@@ -2,6 +2,7 @@ import yfinance as yf
 import pandas as pd
 import streamlit as st
 import time
+from datetime import datetime, timezone, timedelta  # Saat ayarı için yeni eklendi
 
 # Page configuration
 st.set_page_config(page_title="Personal Portfolio", layout="wide")
@@ -10,10 +11,13 @@ st.title("📊 Personal Live Portfolio Dashboard")
 # YOUR REAL INVESTMENTS
 portfolio = {
     'GRID': {'Quantity': 4.591761822, 'Cost': 163.82},
-    'GC=F': {'Quantity': 13.15, 'Cost': 1354 / 13.15}  # Veri istikrarı için Altın Vadeli İşlem sembolü (GC=F) kullanıldı
+    'GC=F': {'Quantity': 13.15, 'Cost': 1354 / 13.15}
 }
 
 table_placeholder = st.empty()
+
+# Türkiye Saat Dilimi (UTC+3) Ayarı
+tz_TR = timezone(timedelta(hours=3))
 
 while True:
     results = []
@@ -34,7 +38,6 @@ while True:
             quantity = details['Quantity']
             avg_cost = details['Cost']
             
-            # Toplam Ana Para ve Güncel Değer Hesaplamaları
             total_cost = quantity * avg_cost
             current_value = quantity * current_price
             
@@ -48,8 +51,8 @@ while True:
                 'Quantity': float(quantity),
                 'Avg. Cost': float(avg_cost),
                 'Current Price': float(current_price),
-                'Total Cost ($)': float(total_cost),        # Yeni Eklendi: O varlığa yatırılan toplam para
-                'Current Value ($)': float(current_value),  # Yeni Eklendi: O varlığın güncel toplam değeri
+                'Total Cost ($)': float(total_cost),
+                'Current Value ($)': float(current_value),
                 'P/L (Amount)': float(pnl_amount),
                 'P/L (%)': float(pnl_percentage)
             })
@@ -85,10 +88,8 @@ while True:
                     'P/L (%)': '{:.2f}%'
                 })
 
-            # Ana Tabloyu Çizdir
             st.dataframe(styled_df, use_container_width=True)
             
-            # Genel Toplam Hesaplamaları
             total_invested = df['Total Cost ($)'].sum()
             total_current = df['Current Value ($)'].sum()
             total_pnl = df['P/L (Amount)'].sum()
@@ -96,13 +97,14 @@ while True:
             st.markdown("---")
             st.markdown("### 📈 Portfolio Summary")
             
-            # Toplamları yan yana 3 sütun halinde gösteren profesyonel modül
             col1, col2, col3 = st.columns(3)
             col1.metric("Total Invested (Ana Para)", f"${total_invested:,.2f}")
             col2.metric("Current Value (Güncel Değer)", f"${total_current:,.2f}")
             col3.metric("Total P/L (Toplam Kar/Zarar)", f"${total_pnl:,.2f}")
             
-            st.caption(f"Last sync: {time.strftime('%H:%M:%S')} (Source: Yahoo Finance)")
+            # Saat bilgisi artık Türkiye (UTC+3) dilimine göre çekiliyor
+            guncel_saat = datetime.now(tz_TR).strftime('%H:%M:%S')
+            st.caption(f"Last sync: {guncel_saat} (Source: Yahoo Finance)")
         else:
             st.warning("Veriler şu an Yahoo Finance üzerinden çekilemiyor. Borsalar kapalı veya ağ bağlantısında kopukluk olabilir.")
 
