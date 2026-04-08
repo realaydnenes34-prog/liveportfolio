@@ -10,7 +10,7 @@ st.title("📊 Personal Live Portfolio Dashboard")
 
 # YOUR REAL INVESTMENTS
 portfolio = {
-    'GRID': {'Quantity': 4.591761822, 'Cost': 163.82},
+    'GRID': {'Quantity': 5.190821455, 'Cost': 163.96},
     'GC=F': {'Quantity': 13.15, 'Cost': 1354 / 13.15}
 }
 
