@@ -2,6 +2,7 @@ import yfinance as yf
 import pandas as pd
 import streamlit as st
 import time
+import requests  # Tarayıcı kimliği için yeni eklendi
 from datetime import datetime, timezone, timedelta
 
 # Page configuration
@@ -17,14 +18,20 @@ portfolio = {
 # Türkiye Saat Dilimi (UTC+3) Ayarı
 tz_TR = timezone(timedelta(hours=3))
 
-# Veri çekme işlemini 60 saniyelik önbelleğe alıyoruz. 
-# Böylece sayfa yenilense bile 1 dakikadan önce Yahoo'ya tekrar istek atılmaz, ban engellenir.
 @st.cache_data(ttl=60)
 def fetch_portfolio_data():
     results = []
+    
+    # --- YENİ EKLENEN KISIM: Tarayıcı Kimliği Maskelemesi ---
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    })
+    
     for ticker, details in portfolio.items():
         try:
-            stock = yf.Ticker(ticker)
+            # yfinance'in bu maskelenmiş oturumu kullanmasını sağlıyoruz
+            stock = yf.Ticker(ticker, session=session)
             history_data = stock.history(period="5d")
             
             if history_data.empty:
