@@ -2,7 +2,7 @@ import yfinance as yf
 import pandas as pd
 import streamlit as st
 import time
-import requests  # Tarayıcı kimliği için yeni eklendi
+import requests
 from datetime import datetime, timezone, timedelta
 
 # Page configuration
@@ -18,11 +18,10 @@ portfolio = {
 # Türkiye Saat Dilimi (UTC+3) Ayarı
 tz_TR = timezone(timedelta(hours=3))
 
-@st.cache_data(ttl=60)
 def fetch_portfolio_data():
     results = []
+    errors = [] # Ne hatası aldığımızı tutacağımız yeni liste
     
-    # --- YENİ EKLENEN KISIM: Tarayıcı Kimliği Maskelemesi ---
     session = requests.Session()
     session.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -30,11 +29,11 @@ def fetch_portfolio_data():
     
     for ticker, details in portfolio.items():
         try:
-            # yfinance'in bu maskelenmiş oturumu kullanmasını sağlıyoruz
             stock = yf.Ticker(ticker, session=session)
             history_data = stock.history(period="5d")
             
             if history_data.empty:
+                errors.append(f"⚠️ {ticker}: Veri boş geldi. Yahoo bu IP'den gelen isteği engelliyor olabilir.")
                 continue
                 
             price_data = history_data['Close'].iloc[-1]
@@ -64,12 +63,19 @@ def fetch_portfolio_data():
                 'P/L (%)': float(pnl_percentage)
             })
         except Exception as e:
+            # Hatayı sessizce geçmek yerine listeye ekliyoruz
+            errors.append(f"❌ {ticker} için teknik hata: {str(e)}")
             continue
             
-    return results
+    return results, errors
 
-# Döngü yerine fonksiyonu çağırıyoruz
-results = fetch_portfolio_data()
+# Fonksiyon artık iki değer dönüyor (Veriler ve Hatalar)
+results, errors = fetch_portfolio_data()
+
+# EĞER HATA VARSA EKRANDA GÖSTER (Sorunu teşhis etmemiz için)
+if len(errors) > 0:
+    for error in errors:
+        st.error(error)
 
 if len(results) > 0:
     df = pd.DataFrame(results)
@@ -116,8 +122,8 @@ if len(results) > 0:
     guncel_saat = datetime.now(tz_TR).strftime('%H:%M:%S')
     st.caption(f"Last sync: {guncel_saat} (Source: Yahoo Finance)")
 else:
-    st.warning("Veriler şu an Yahoo Finance üzerinden çekilemiyor. Borsalar kapalı veya ağ bağlantısında kopukluk olabilir.")
+    st.warning("Ekranda listelenecek geçerli bir veri bulunamadı.")
 
-# Sayfayı 60 saniyede bir otomatik olarak yeniden başlatır (Canlı görünüm sağlar)
-time.sleep(60)
+# Bekleme süresini kısa tutalım ki testi hemen görebilelim
+time.sleep(10)
 st.rerun()
