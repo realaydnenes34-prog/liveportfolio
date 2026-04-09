@@ -2,7 +2,6 @@ import yfinance as yf
 import pandas as pd
 import streamlit as st
 import time
-import requests
 from datetime import datetime, timezone, timedelta
 
 # Page configuration
@@ -18,22 +17,19 @@ portfolio = {
 # Türkiye Saat Dilimi (UTC+3) Ayarı
 tz_TR = timezone(timedelta(hours=3))
 
+@st.cache_data(ttl=60)
 def fetch_portfolio_data():
     results = []
-    errors = [] # Ne hatası aldığımızı tutacağımız yeni liste
-    
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    })
+    errors = [] 
     
     for ticker, details in portfolio.items():
         try:
-            stock = yf.Ticker(ticker, session=session)
+            # Session parametresini tamamen kaldırdık. YF kendi ayarlarını kullanacak.
+            stock = yf.Ticker(ticker)
             history_data = stock.history(period="5d")
             
             if history_data.empty:
-                errors.append(f"⚠️ {ticker}: Veri boş geldi. Yahoo bu IP'den gelen isteği engelliyor olabilir.")
+                errors.append(f"⚠️ {ticker}: Veri boş geldi. Yahoo IP engeli devam ediyor olabilir.")
                 continue
                 
             price_data = history_data['Close'].iloc[-1]
@@ -63,16 +59,14 @@ def fetch_portfolio_data():
                 'P/L (%)': float(pnl_percentage)
             })
         except Exception as e:
-            # Hatayı sessizce geçmek yerine listeye ekliyoruz
             errors.append(f"❌ {ticker} için teknik hata: {str(e)}")
             continue
             
     return results, errors
 
-# Fonksiyon artık iki değer dönüyor (Veriler ve Hatalar)
 results, errors = fetch_portfolio_data()
 
-# EĞER HATA VARSA EKRANDA GÖSTER (Sorunu teşhis etmemiz için)
+# Hataları ekranda gösterme
 if len(errors) > 0:
     for error in errors:
         st.error(error)
@@ -124,6 +118,5 @@ if len(results) > 0:
 else:
     st.warning("Ekranda listelenecek geçerli bir veri bulunamadı.")
 
-# Bekleme süresini kısa tutalım ki testi hemen görebilelim
-time.sleep(10)
+time.sleep(60)
 st.rerun()
