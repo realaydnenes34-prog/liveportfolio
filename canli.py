@@ -2,7 +2,7 @@ import yfinance as yf
 import pandas as pd
 import streamlit as st
 import time
-from datetime import datetime, timezone, timedelta  # Saat ayarı için yeni eklendi
+from datetime import datetime, timezone, timedelta
 
 # Page configuration
 st.set_page_config(page_title="Personal Portfolio", layout="wide")
@@ -14,14 +14,14 @@ portfolio = {
     'GC=F': {'Quantity': 13.15, 'Cost': 1354 / 13.15}
 }
 
-table_placeholder = st.empty()
-
 # Türkiye Saat Dilimi (UTC+3) Ayarı
 tz_TR = timezone(timedelta(hours=3))
 
-while True:
+# Veri çekme işlemini 60 saniyelik önbelleğe alıyoruz. 
+# Böylece sayfa yenilense bile 1 dakikadan önce Yahoo'ya tekrar istek atılmaz, ban engellenir.
+@st.cache_data(ttl=60)
+def fetch_portfolio_data():
     results = []
-    
     for ticker, details in portfolio.items():
         try:
             stock = yf.Ticker(ticker)
@@ -58,54 +58,59 @@ while True:
             })
         except Exception as e:
             continue
+            
+    return results
 
-    with table_placeholder.container():
-        if len(results) > 0:
-            df = pd.DataFrame(results)
-            
-            def color_negative_red(val):
-                color = 'red' if val < 0 else 'green'
-                return f'color: {color}'
+# Döngü yerine fonksiyonu çağırıyoruz
+results = fetch_portfolio_data()
 
-            try:
-                styled_df = df.style.map(color_negative_red, subset=['P/L (Amount)', 'P/L (%)']).format({
-                    'Quantity': '{:.4f}',
-                    'Avg. Cost': '{:.2f}',
-                    'Current Price': '{:.2f}',
-                    'Total Cost ($)': '{:.2f}',
-                    'Current Value ($)': '{:.2f}',
-                    'P/L (Amount)': '{:.2f}',
-                    'P/L (%)': '{:.2f}%'
-                })
-            except AttributeError:
-                styled_df = df.style.applymap(color_negative_red, subset=['P/L (Amount)', 'P/L (%)']).format({
-                    'Quantity': '{:.4f}',
-                    'Avg. Cost': '{:.2f}',
-                    'Current Price': '{:.2f}',
-                    'Total Cost ($)': '{:.2f}',
-                    'Current Value ($)': '{:.2f}',
-                    'P/L (Amount)': '{:.2f}',
-                    'P/L (%)': '{:.2f}%'
-                })
+if len(results) > 0:
+    df = pd.DataFrame(results)
+    
+    def color_negative_red(val):
+        color = 'red' if val < 0 else 'green'
+        return f'color: {color}'
 
-            st.dataframe(styled_df, use_container_width=True)
-            
-            total_invested = df['Total Cost ($)'].sum()
-            total_current = df['Current Value ($)'].sum()
-            total_pnl = df['P/L (Amount)'].sum()
-            
-            st.markdown("---")
-            st.markdown("### 📈 Portfolio Summary")
-            
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Total Invested (Ana Para)", f"${total_invested:,.2f}")
-            col2.metric("Current Value (Güncel Değer)", f"${total_current:,.2f}")
-            col3.metric("Total P/L (Toplam Kar/Zarar)", f"${total_pnl:,.2f}")
-            
-            # Saat bilgisi artık Türkiye (UTC+3) dilimine göre çekiliyor
-            guncel_saat = datetime.now(tz_TR).strftime('%H:%M:%S')
-            st.caption(f"Last sync: {guncel_saat} (Source: Yahoo Finance)")
-        else:
-            st.warning("Veriler şu an Yahoo Finance üzerinden çekilemiyor. Borsalar kapalı veya ağ bağlantısında kopukluk olabilir.")
+    try:
+        styled_df = df.style.map(color_negative_red, subset=['P/L (Amount)', 'P/L (%)']).format({
+            'Quantity': '{:.4f}',
+            'Avg. Cost': '{:.2f}',
+            'Current Price': '{:.2f}',
+            'Total Cost ($)': '{:.2f}',
+            'Current Value ($)': '{:.2f}',
+            'P/L (Amount)': '{:.2f}',
+            'P/L (%)': '{:.2f}%'
+        })
+    except AttributeError:
+        styled_df = df.style.applymap(color_negative_red, subset=['P/L (Amount)', 'P/L (%)']).format({
+            'Quantity': '{:.4f}',
+            'Avg. Cost': '{:.2f}',
+            'Current Price': '{:.2f}',
+            'Total Cost ($)': '{:.2f}',
+            'Current Value ($)': '{:.2f}',
+            'P/L (Amount)': '{:.2f}',
+            'P/L (%)': '{:.2f}%'
+        })
 
-    time.sleep(10)
+    st.dataframe(styled_df, use_container_width=True)
+    
+    total_invested = df['Total Cost ($)'].sum()
+    total_current = df['Current Value ($)'].sum()
+    total_pnl = df['P/L (Amount)'].sum()
+    
+    st.markdown("---")
+    st.markdown("### 📈 Portfolio Summary")
+    
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Invested (Ana Para)", f"${total_invested:,.2f}")
+    col2.metric("Current Value (Güncel Değer)", f"${total_current:,.2f}")
+    col3.metric("Total P/L (Toplam Kar/Zarar)", f"${total_pnl:,.2f}")
+    
+    guncel_saat = datetime.now(tz_TR).strftime('%H:%M:%S')
+    st.caption(f"Last sync: {guncel_saat} (Source: Yahoo Finance)")
+else:
+    st.warning("Veriler şu an Yahoo Finance üzerinden çekilemiyor. Borsalar kapalı veya ağ bağlantısında kopukluk olabilir.")
+
+# Sayfayı 60 saniyede bir otomatik olarak yeniden başlatır (Canlı görünüm sağlar)
+time.sleep(60)
+st.rerun()
