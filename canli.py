@@ -4,19 +4,20 @@ import streamlit as st
 import time
 from datetime import datetime, timezone, timedelta
 
-# Page configuration
+# Sayfa yapılandırması
 st.set_page_config(page_title="Personal Portfolio", layout="wide")
 st.title("📊 Personal Live Portfolio Dashboard")
 
-# YOUR REAL INVESTMENTS
+# YATIRIMLARINIZ (Miktarlar ve Maliyetler)
 portfolio = {
     'GRID': {'Quantity': 5.190821455, 'Cost': 163.96},
     'GC=F': {'Quantity': 13.15, 'Cost': 1354 / 13.15}
 }
 
-# Türkiye Saat Dilimi (UTC+3) Ayarı
+# Türkiye Saat Dilimi (UTC+3)
 tz_TR = timezone(timedelta(hours=3))
 
+# Önbellekleme: 60 saniyede bir veri çekilir (Ban yemeyi önler)
 @st.cache_data(ttl=60)
 def fetch_portfolio_data():
     results = []
@@ -24,15 +25,22 @@ def fetch_portfolio_data():
     
     for ticker, details in portfolio.items():
         try:
-            # Session parametresini tamamen kaldırdık. YF kendi ayarlarını kullanacak.
+            # yfinance'in kendi gelişmiş tarayıcı maskelemesini kullanmasına izin veriyoruz
             stock = yf.Ticker(ticker)
             history_data = stock.history(period="5d")
             
             if history_data.empty:
-                errors.append(f"⚠️ {ticker}: Veri boş geldi. Yahoo IP engeli devam ediyor olabilir.")
+                errors.append(f"⚠️ {ticker}: Veri paketi tamamen boş geldi.")
                 continue
                 
-            price_data = history_data['Close'].iloc[-1]
+            # Eksik (NaN) verileri temizleyip en son geçerli kapanış fiyatını buluyoruz
+            valid_closes = history_data['Close'].dropna()
+            
+            if valid_closes.empty:
+                errors.append(f"⚠️ {ticker}: Son 5 gün içinde geçerli bir fiyat bulunamadı.")
+                continue
+                
+            price_data = valid_closes.iloc[-1]
             
             # Altın ONS fiyatını grama çevirme
             current_price = price_data / 31.1035 if ticker == 'GC=F' else price_data
@@ -59,18 +67,21 @@ def fetch_portfolio_data():
                 'P/L (%)': float(pnl_percentage)
             })
         except Exception as e:
+            # Hatayı sessizce yutmak yerine ekranda göstermek için listeye ekliyoruz
             errors.append(f"❌ {ticker} için teknik hata: {str(e)}")
             continue
             
     return results, errors
 
+# Verileri ve olası hataları fonksiyondan alıyoruz
 results, errors = fetch_portfolio_data()
 
-# Hataları ekranda gösterme
+# Eğer arka planda bir hata oluştuysa ekranda göster
 if len(errors) > 0:
     for error in errors:
         st.error(error)
 
+# Eğer elimizde geçerli veri varsa tabloyu ve özet metrikleri çiz
 if len(results) > 0:
     df = pd.DataFrame(results)
     
@@ -78,6 +89,7 @@ if len(results) > 0:
         color = 'red' if val < 0 else 'green'
         return f'color: {color}'
 
+    # Pandas sürüm uyumluluğu için try-except
     try:
         styled_df = df.style.map(color_negative_red, subset=['P/L (Amount)', 'P/L (%)']).format({
             'Quantity': '{:.4f}',
@@ -118,5 +130,6 @@ if len(results) > 0:
 else:
     st.warning("Ekranda listelenecek geçerli bir veri bulunamadı.")
 
+# Otomatik yenileme: 60 saniye bekler ve baştan çalışır (Canlı görünüm sağlar)
 time.sleep(60)
 st.rerun()
