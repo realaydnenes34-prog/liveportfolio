@@ -248,7 +248,8 @@ if not df_history.empty:
     st.plotly_chart(fig, use_container_width=True)
 else:
     st.info("Geçmiş grafik verileri hazırlanıyor...")
-# --- CANLI GÜNCELLEME DÖNGÜSÜ ---
-# Uygulamayı 60 saniye duraklatır ve sonra tamamen baştan okur (Yeniler)
-time.sleep(60)
-st.rerun()
+# --- CANLI GÜNCELLEME DÖNGÜSÜ (ASENKRON) ---
+from streamlit_autorefresh import st_autorefresh
+
+# Ekranı dondurmadan arka planda her 60 saniyede bir (60000 milisaniye) verileri günceller
+st_autorefresh(interval=60000, key="portfolio_update")
