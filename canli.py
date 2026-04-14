@@ -145,7 +145,109 @@ if len(results) > 0:
     st.caption(f"Last sync: {guncel_saat} (Source: Yahoo Finance)")
 else:
     st.warning("Ekranda listelenecek geçerli bir veri bulunamadı.")
+import plotly.express as px
+import numpy as np
 
+# --- GEÇMİŞ PORTFÖY PERFORMANSI FONKSİYONU ---
+@st.cache_data(ttl=3600)
+def fetch_historical_chart_data(transactions_dict):
+    # 1. Bütün işlemleri tek bir listede topla ve tarihe göre sırala
+    all_tx = []
+    for ticker, txs in transactions_dict.items():
+        for tx in txs:
+            all_tx.append({
+                'Ticker': ticker,
+                'Date': pd.to_datetime(tx['Date']).tz_localize(None),
+                'Quantity': tx['Quantity'],
+                'Total_Cost': tx['Total_Cost']
+            })
+            
+    df_tx = pd.DataFrame(all_tx).sort_values('Date')
+    if df_tx.empty: return pd.DataFrame()
+    
+    start_date_str = df_tx['Date'].min().strftime('%Y-%m-%d')
+    
+    # 2. En eski alımdan bugüne fiyat verilerini çek
+    all_prices = {}
+    for ticker in transactions_dict.keys():
+        try:
+            hist = yf.Ticker(ticker).history(start=start_date_str)
+            if not hist.empty:
+                hist.index = hist.index.tz_localize(None)
+                # Altın için ONS -> Gram çevrimi
+                if ticker == 'GC=F':
+                    hist['Close'] = hist['Close'] / 31.1035
+                all_prices[ticker] = hist['Close']
+        except:
+            continue
+            
+    if not all_prices: return pd.DataFrame()
+    
+    df_prices = pd.DataFrame(all_prices).ffill().dropna(how='all')
+    
+    # 3. Günlük Portföy Değeri ve Maliyet Hesaplama
+    df_history = pd.DataFrame(index=df_prices.index)
+    df_history['Total_Cost'] = 0.0
+    df_history['Total_Value'] = 0.0
+    
+    for ticker in transactions_dict.keys():
+        if ticker not in df_prices.columns: continue
+        
+        ticker_tx = df_tx[df_tx['Ticker'] == ticker]
+        daily_qty = pd.Series(0.0, index=df_prices.index)
+        daily_cost = pd.Series(0.0, index=df_prices.index)
+        
+        for _, row in ticker_tx.iterrows():
+            mask = df_prices.index >= row['Date']
+            daily_qty[mask] += row['Quantity']
+            daily_cost[mask] += row['Total_Cost']
+            
+        df_history['Total_Value'] += daily_qty * df_prices[ticker]
+        df_history['Total_Cost'] += daily_cost
+
+    # 4. Yüzdelik Kar/Zarar (%)
+    df_history['P/L (%)'] = np.where(
+        df_history['Total_Cost'] > 0, 
+        ((df_history['Total_Value'] - df_history['Total_Cost']) / df_history['Total_Cost']) * 100, 
+        0
+    )
+    
+    return df_history
+
+# --- GRAFİĞİ EKRANA ÇİZME ---
+st.markdown("---")
+st.markdown("### 📈 Portfolio Growth Over Time (%)")
+
+# Geçmiş veriyi hesapla
+df_history = fetch_historical_chart_data(portfolio_transactions)
+
+if not df_history.empty:
+    fig = px.line(
+        df_history, 
+        x=df_history.index, 
+        y='P/L (%)', 
+        labels={'index': 'Tarih', 'P/L (%)': 'Net Kar / Zarar (%)'}
+    )
+    
+    # Başabaş çizgisi
+    fig.add_hline(y=0, line_dash="dash", line_color="gray", annotation_text="Maliyet")
+    
+    # Son durum kârdaysa yeşil, zarardaysa kırmızı
+    line_color = '#00C853' if df_history['P/L (%)'].iloc[-1] >= 0 else '#D50000'
+    fig.update_traces(line_color=line_color, line_width=2)
+    
+    fig.update_layout(
+        hovermode="x unified",
+        xaxis_title="", 
+        yaxis_title="Büyüme (%)",
+        margin=dict(l=0, r=0, t=30, b=0),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)'
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.info("Geçmiş grafik verileri hazırlanıyor...")
 # --- CANLI GÜNCELLEME DÖNGÜSÜ ---
 # Uygulamayı 60 saniye duraklatır ve sonra tamamen baştan okur (Yeniler)
 time.sleep(60)
