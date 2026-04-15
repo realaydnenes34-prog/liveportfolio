@@ -4,6 +4,10 @@ import streamlit as st
 import time
 from datetime import datetime, timezone, timedelta
 
+# ---> BU İKİ SATIRI BURAYA EKLE <---
+import plotly.express as px
+import numpy as np
+
 # --- SAYFA YAPILANDIRMASI ---
 st.set_page_config(page_title="Personal Portfolio", layout="wide")
 st.title("📊 Personal Live Portfolio Dashboard")
@@ -178,8 +182,6 @@ if len(results) > 0:
             st.plotly_chart(fig_pie, use_container_width=True)
 else:
     st.warning("Ekranda listelenecek geçerli bir veri bulunamadı.")
-import plotly.express as px
-import numpy as np
 
 # --- GEÇMİŞ PORTFÖY PERFORMANSI FONKSİYONU ---
 @st.cache_data(ttl=3600)
