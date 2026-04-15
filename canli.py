@@ -143,6 +143,39 @@ if len(results) > 0:
     # Güncelleme Saati
     guncel_saat = datetime.now(tz_TR).strftime('%H:%M:%S')
     st.caption(f"Last sync: {guncel_saat} (Source: Yahoo Finance)")
+    # --- YENİ EKLENEN: VARLIK DAĞILIMI (PASTA GRAFİĞİ) ---
+    st.markdown("---")
+    st.markdown("### 🥧 Asset Allocation")
+    
+    # df tablosu halihazırda 'Asset' ve 'Current Value ($)' sütunlarına sahip
+    df_pie = df[df['Current Value ($)'] > 0]
+    
+    if not df_pie.empty:
+        fig_pie = px.pie(
+            df_pie, 
+            values='Current Value ($)', 
+            names='Asset',
+            hole=0.4,
+            hover_data=['Current Value ($)'],
+            labels={'Current Value ($)':'Değer ($)'}
+        )
+        
+        fig_pie.update_traces(
+            textposition='inside', 
+            textinfo='percent+label',
+            marker=dict(line=dict(color='#000000', width=1))
+        )
+        
+        fig_pie.update_layout(
+            showlegend=False,
+            margin=dict(t=10, b=10, l=10, r=10),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
+        
+        col_pie, _ = st.columns([1, 1]) 
+        with col_pie:
+            st.plotly_chart(fig_pie, use_container_width=True)
 else:
     st.warning("Ekranda listelenecek geçerli bir veri bulunamadı.")
 import plotly.express as px
