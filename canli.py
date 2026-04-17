@@ -255,6 +255,31 @@ st.markdown("### 📈 Portfolio Growth Over Time (%)")
 
 # Geçmiş veriyi hesapla
 df_history = fetch_historical_chart_data(portfolio_transactions)
+# --- YENİ EKLENEN: VARLIK AKIŞI GRAFİĞİ (MİDAS TARZI) ---
+if not df_history.empty:
+    st.markdown("### 🌊 Varlık Akışı (Total Portfolio Value)")
+    
+    # Alan grafiği (Area Chart) çizimi
+    fig_value = px.area(
+        df_history, 
+        x=df_history.index, 
+        y='Total_Value', 
+        labels={'index': 'Tarih', 'Total_Value': 'Toplam Değer ($)'}
+    )
+    
+    # Midas estetiği: Çizgi altı dolu, modern mavi tonu
+    fig_value.update_traces(line_color='#2962FF', fillcolor='rgba(41, 98, 255, 0.2)')
+    
+    fig_value.update_layout(
+        hovermode="x unified",
+        xaxis_title="", 
+        yaxis_title="Büyüklük ($)",
+        margin=dict(l=0, r=0, t=30, b=0),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)'
+    )
+    st.plotly_chart(fig_value, use_container_width=True)
+    st.markdown("---")
 
 if not df_history.empty:
     fig = px.line(
