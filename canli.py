@@ -16,7 +16,8 @@ st.title("📊 Personal Live Portfolio Dashboard")
 portfolio_transactions = {
     'GC=F': [
         {'Date': '2025-05-22', 'Quantity': 13.15, 'Total_Cost': 1354.0},
-        {'Date': '2026-05-01', 'Quantity': -13.15, 'Total_Cost': -1920.0} # 1920 dolarlık satış girişi
+        # DİKKAT: Ana parayı sıfırlamak için -1354 yazıyoruz. Kârı ise ayrıca belirtiyoruz.
+        {'Date': '2026-05-01', 'Quantity': -13.15, 'Total_Cost': -1354.0, 'Realized_Profit': 566.0} 
     ],
     'GRID': [
         {'Date': '2026-01-26', 'Quantity': 2.524859813, 'Total_Cost': 406.74},
@@ -155,7 +156,6 @@ if len(results) > 0:
     for ticker, txs in portfolio_transactions.items():
         t_qty = sum(tx['Quantity'] for tx in txs)
         t_cost = sum(tx['Total_Cost'] for tx in txs)
-        # Eğer miktar 0 ise (tamamen satıldıysa) içeride kalan eksi bakiye net kârımızdır
         if abs(t_qty) < 1e-6: 
             realized_pnl += -t_cost
 
