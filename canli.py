@@ -151,13 +151,12 @@ if len(results) > 0:
     total_current = df['Current Value ($)'].sum()
     total_pnl = df['P/L (Amount)'].sum()
     
-    # --- YENİ: GERÇEKLEŞMİŞ KÂR HESAPLAMASI ---
+    # --- YENİ: GERÇEKLEŞMİŞ KÂR HESAPLAMASI (GÜNCELLENDİ) ---
     realized_pnl = 0
     for ticker, txs in portfolio_transactions.items():
-        t_qty = sum(tx['Quantity'] for tx in txs)
-        t_cost = sum(tx['Total_Cost'] for tx in txs)
-        if abs(t_qty) < 1e-6: 
-            realized_pnl += -t_cost
+        for tx in txs:
+            # Eğer o işlemde 'Realized_Profit' yazılmışsa onu cepteki kâra ekle
+            realized_pnl += tx.get('Realized_Profit', 0)
 
     st.markdown("---")
     st.markdown("### 📈 Portfolio Summary")
