@@ -15,8 +15,8 @@ st.title("📊 Personal Live Portfolio Dashboard")
 # --- YATIRIM PORTFÖYÜ (İŞLEM GEÇMİŞİ) ---
 portfolio_transactions = {
     'GC=F': [
-        {'Date': '2025-05-22', 'Quantity': 13.15, 'Total_Cost': 1354.0} # 13.15 gram için toplam ödenen
-        {'Date': '2026-04-28', 'Quantity': -13.15, 'Total_Cost': -1354.0} # SATIŞ İŞLEMİ
+        {'Date': '2025-05-22', 'Quantity': 13.15, 'Total_Cost': 1354.0},  # <-- Buradaki virgül hataya sebep oluyordu
+        {'Date': '2026-05-01', 'Quantity': -13.15, 'Total_Cost': -1354.0} # Satış işlemi eklendi
     ],
     'GRID': [
         {'Date': '2026-01-26', 'Quantity': 2.524859813, 'Total_Cost': 406.74},
