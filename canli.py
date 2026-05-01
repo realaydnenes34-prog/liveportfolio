@@ -15,8 +15,8 @@ st.title("📊 Personal Live Portfolio Dashboard")
 # --- YATIRIM PORTFÖYÜ (İŞLEM GEÇMİŞİ) ---
 portfolio_transactions = {
     'GC=F': [
-        {'Date': '2025-05-22', 'Quantity': 13.15, 'Total_Cost': 1354.0},  # <-- Buradaki virgül hataya sebep oluyordu
-        {'Date': '2026-05-01', 'Quantity': -13.15, 'Total_Cost': -1354.0} # Satış işlemi eklendi
+        {'Date': '2025-05-22', 'Quantity': 13.15, 'Total_Cost': 1354.0},
+        {'Date': '2026-05-01', 'Quantity': -13.15, 'Total_Cost': -1920.0} # 1920 dolarlık satış girişi
     ],
     'GRID': [
         {'Date': '2026-01-26', 'Quantity': 2.524859813, 'Total_Cost': 406.74},
@@ -38,6 +38,11 @@ def fetch_portfolio_data(transactions_dict):
             # Önce bu hisse için kümülatif toplamları hesapla
             total_quantity = sum(tx['Quantity'] for tx in txs)
             total_cost_all_tx = sum(tx['Total_Cost'] for tx in txs)
+            
+            # EĞER POZİSYON KAPANDIYSA (Tamamı satıldıysa) tablodaki aktif maliyeti gizle
+            if abs(total_quantity) < 1e-6:
+                total_quantity = 0.0
+                total_cost_all_tx = 0.0
             
             # Ortalama maliyeti bul
             avg_cost = total_cost_all_tx / total_quantity if total_quantity > 0 else 0
@@ -140,10 +145,29 @@ if len(results) > 0:
     st.markdown("---")
     st.markdown("### 📈 Portfolio Summary")
     
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total Invested (Ana Para)", f"${total_invested:,.2f}")
+    # Özet Metrikleri Hesaplama
+    total_invested = df['Total Cost ($)'].sum()
+    total_current = df['Current Value ($)'].sum()
+    total_pnl = df['P/L (Amount)'].sum()
+    
+    # --- YENİ: GERÇEKLEŞMİŞ KÂR HESAPLAMASI ---
+    realized_pnl = 0
+    for ticker, txs in portfolio_transactions.items():
+        t_qty = sum(tx['Quantity'] for tx in txs)
+        t_cost = sum(tx['Total_Cost'] for tx in txs)
+        # Eğer miktar 0 ise (tamamen satıldıysa) içeride kalan eksi bakiye net kârımızdır
+        if abs(t_qty) < 1e-6: 
+            realized_pnl += -t_cost
+
+    st.markdown("---")
+    st.markdown("### 📈 Portfolio Summary")
+    
+    # 3 sütunu 4 sütuna çıkarıyoruz
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total Invested (Aktif Ana Para)", f"${total_invested:,.2f}")
     col2.metric("Current Value (Güncel Değer)", f"${total_current:,.2f}")
-    col3.metric("Total P/L (Toplam Kar/Zarar)", f"${total_pnl:,.2f}")
+    col3.metric("Unrealized P/L (Aktif Kâr)", f"${total_pnl:,.2f}")
+    col4.metric("Realized P/L (Cepteki Kâr)", f"${realized_pnl:,.2f}")
     
     # Güncelleme Saati
     guncel_saat = datetime.now(tz_TR).strftime('%H:%M:%S')
