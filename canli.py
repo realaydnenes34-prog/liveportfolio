@@ -144,9 +144,6 @@ if len(results) > 0:
     total_current = df['Current Value ($)'].sum()
     total_pnl = df['P/L (Amount)'].sum()
     
-    st.markdown("---")
-    st.markdown("### 📈 Portfolio Summary")
-    
     # Özet Metrikleri Hesaplama
     total_invested = df['Total Cost ($)'].sum()
     total_current = df['Current Value ($)'].sum()
