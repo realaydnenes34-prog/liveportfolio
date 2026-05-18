@@ -22,7 +22,9 @@ portfolio_transactions = {
         {'Date': '2026-02-05', 'Quantity': 1.200408824, 'Total_Cost': 199.99},
         {'Date': '2026-03-04', 'Quantity': 0.866493185, 'Total_Cost': 150.01},
         {'Date': '2026-04-07', 'Quantity': 0.599059633, 'Total_Cost': 100.37},
-        {'Date': '2026-05-15', 'Quantity': 2.084745762, 'Total_Cost': 400.02}
+        {'Date': '2026-05-15', 'Quantity': 2.084745762, 'Total_Cost': 400.02},
+        {'Date': '2026-05-18', 'Quantity': -1.318426326, 'Total_Cost': -227.81, 'Realized_Profit': 20.68}
+    ]
     ]
 }
 
