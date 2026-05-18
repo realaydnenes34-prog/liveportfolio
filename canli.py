@@ -25,7 +25,6 @@ portfolio_transactions = {
         {'Date': '2026-05-15', 'Quantity': 2.084745762, 'Total_Cost': 400.02},
         {'Date': '2026-05-18', 'Quantity': -1.318426326, 'Total_Cost': -227.81, 'Realized_Profit': 20.68}
     ]
-    ]
 }
 
 # Türkiye Saat Dilimi (UTC+3)
