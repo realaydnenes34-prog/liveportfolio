@@ -136,7 +136,6 @@ if len(results) > 0:
             'P/L (Amount)': '{:.2f}',
             'P/L (%)': '{:.2f}%'
         })
-
    st.dataframe(styled_df, use_container_width=True)
     
     # ====================================================
