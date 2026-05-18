@@ -3,8 +3,6 @@ import pandas as pd
 import streamlit as st
 import time
 from datetime import datetime, timezone, timedelta
-
-# ---> BU İKİ SATIRI BURAYA EKLE <---
 import plotly.express as px
 import numpy as np
 
@@ -16,7 +14,7 @@ st.title("📊 Personal Live Portfolio Dashboard")
 portfolio_transactions = {
     'GC=F': [
         {'Date': '2025-05-22', 'Quantity': 13.15, 'Total_Cost': 1354.0},
-        # DİKKAT: Ana parayı sıfırlamak için -1354 yazıyoruz. Kârı ise ayrıca belirtiyoruz.
+        # Altın Satışı ve Kârın Ayrılması
         {'Date': '2026-04-29', 'Quantity': -13.15, 'Total_Cost': -1354.0, 'Realized_Profit': 566.0} 
     ],
     'GRID': [
@@ -27,9 +25,11 @@ portfolio_transactions = {
         {'Date': '2026-05-15', 'Quantity': 2.084745762, 'Total_Cost': 400.02}
     ]
 }
+
 # Türkiye Saat Dilimi (UTC+3)
 tz_TR = timezone(timedelta(hours=3))
 
+# --- VERİ ÇEKME FONKSİYONU ---
 @st.cache_data(ttl=60)
 def fetch_portfolio_data(transactions_dict):
     results = []
@@ -37,19 +37,16 @@ def fetch_portfolio_data(transactions_dict):
     
     for ticker, txs in transactions_dict.items():
         try:
-            # Önce bu hisse için kümülatif toplamları hesapla
             total_quantity = sum(tx['Quantity'] for tx in txs)
             total_cost_all_tx = sum(tx['Total_Cost'] for tx in txs)
             
-            # EĞER POZİSYON KAPANDIYSA (Tamamı satıldıysa) tablodaki aktif maliyeti gizle
+            # EĞER POZİSYON KAPANDIYSA tablodaki aktif maliyeti gizle
             if abs(total_quantity) < 1e-6:
                 total_quantity = 0.0
                 total_cost_all_tx = 0.0
             
-            # Ortalama maliyeti bul
             avg_cost = total_cost_all_tx / total_quantity if total_quantity > 0 else 0
             
-            # Fiyat Çekme İşlemleri (Senin yazdığın 3 aşamalı yapı aynen kalıyor)
             stock = yf.Ticker(ticker)
             price_data = None
             
@@ -72,7 +69,6 @@ def fetch_portfolio_data(transactions_dict):
                 errors.append(f"⚠️ {ticker}: Fiyat bulunamadı.")
                 continue
             
-            # --- HESAPLAMALAR ---
             current_price = price_data / 31.1035 if ticker == 'GC=F' else price_data
             
             current_value = total_quantity * current_price
@@ -84,7 +80,7 @@ def fetch_portfolio_data(transactions_dict):
             results.append({
                 'Asset': display_name,
                 'Quantity': float(total_quantity),
-                'Avg. Cost': float(avg_cost), # İşlem ücretleri dahil gerçek ortalama
+                'Avg. Cost': float(avg_cost),
                 'Current Price': float(current_price),
                 'Total Cost ($)': float(total_cost_all_tx),
                 'Current Value ($)': float(current_value),
@@ -101,16 +97,13 @@ def fetch_portfolio_data(transactions_dict):
 # --- ANA PROGRAM ---
 results, errors = fetch_portfolio_data(portfolio_transactions)
 
-# Varsa arka plan hatalarını ekranda göster
 if len(errors) > 0:
     for error in errors:
         st.error(error)
 
-# Veriler çekildiyse tabloyu ve paneli çiz
 if len(results) > 0:
     df = pd.DataFrame(results)
     
-    # Kar/Zarar renklendirmesi
     def color_negative_red(val):
         color = 'red' if val < 0 else 'green'
         return f'color: {color}'
@@ -126,7 +119,6 @@ if len(results) > 0:
             'P/L (%)': '{:.2f}%'
         })
     except AttributeError:
-        # Eski Pandas sürümleri için uyumluluk
         styled_df = df.style.applymap(color_negative_red, subset=['P/L (Amount)', 'P/L (%)']).format({
             'Quantity': '{:.4f}',
             'Avg. Cost': '{:.2f}',
@@ -136,11 +128,10 @@ if len(results) > 0:
             'P/L (Amount)': '{:.2f}',
             'P/L (%)': '{:.2f}%'
         })
-   st.dataframe(styled_df, use_container_width=True)
+
+    st.dataframe(styled_df, use_container_width=True)
     
-    # ====================================================
-    # 1. BÖLÜM: PORTFÖY ÖZETİ (Çift yazılan kısımlar temizlendi)
-    # ====================================================
+    # --- BÖLÜM 1: PORTFÖY ÖZETİ ---
     total_invested = df['Total Cost ($)'].sum()
     total_current = df['Current Value ($)'].sum()
     total_pnl = df['P/L (Amount)'].sum()
@@ -162,9 +153,7 @@ if len(results) > 0:
     guncel_saat = datetime.now(tz_TR).strftime('%H:%M:%S')
     st.caption(f"Last sync: {guncel_saat} (Source: Yahoo Finance)")
 
-    # ====================================================
-    # 2. BÖLÜM: PASTA GRAFİĞİ (Asset Allocation)
-    # ====================================================
+    # --- BÖLÜM 2: PASTA GRAFİĞİ ---
     st.markdown("---")
     st.markdown("### 🥧 Asset Allocation")
     
@@ -199,9 +188,7 @@ if len(results) > 0:
 else:
     st.warning("Ekranda listelenecek geçerli bir veri bulunamadı.")
 
-# ====================================================
-# 3. BÖLÜM: GEÇMİŞ PORTFÖY PERFORMANSI HESAPLAMA FONKSİYONU
-# ====================================================
+# --- BÖLÜM 3: GEÇMİŞ PORTFÖY HESAPLAMASI ---
 @st.cache_data(ttl=3600)
 def fetch_historical_chart_data(transactions_dict):
     all_tx = []
@@ -262,14 +249,12 @@ def fetch_historical_chart_data(transactions_dict):
     
     return df_history
 
-# ====================================================
-# 4. BÖLÜM: GRAFİKLERİN ÇİZİMİ (Sıralamalar Düzeltildi)
-# ====================================================
+# --- BÖLÜM 4: ÇİZGİ VE ALAN GRAFİKLERİ ---
 df_history = fetch_historical_chart_data(portfolio_transactions)
 
 if not df_history.empty:
     
-    # --- ÜST GRAFİK: VARLIK AKIŞI (MAVİ) ---
+    # 1. Varlık Akışı (Mavi)
     st.markdown("---")
     st.markdown("### 🌊 Varlık Akışı (Total Portfolio Value)")
     
@@ -286,8 +271,7 @@ if not df_history.empty:
     )
     st.plotly_chart(fig_value, use_container_width=True)
 
-
-    # --- ALT GRAFİK: YÜZDELİK BÜYÜME (YEŞİL) ---
+    # 2. Yüzdelik Büyüme (Yeşil/Kırmızı)
     st.markdown("---")
     st.markdown("### 📈 Portfolio Growth Over Time (%)")
     
@@ -309,8 +293,6 @@ if not df_history.empty:
 else:
     st.info("Geçmiş grafik verileri hazırlanıyor...")
 
-# ====================================================
-# 5. BÖLÜM: ASENKRON CANLI GÜNCELLEME DÖNGÜSÜ
-# ====================================================
+# --- BÖLÜM 5: CANLI GÜNCELLEME ---
 from streamlit_autorefresh import st_autorefresh
 st_autorefresh(interval=60000, key="portfolio_update")
