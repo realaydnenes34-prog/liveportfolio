@@ -137,43 +137,38 @@ if len(results) > 0:
             'P/L (%)': '{:.2f}%'
         })
 
-    st.dataframe(styled_df, use_container_width=True)
+   st.dataframe(styled_df, use_container_width=True)
     
-    # Özet Metrikleri Hesaplama
+    # ====================================================
+    # 1. BÖLÜM: PORTFÖY ÖZETİ (Çift yazılan kısımlar temizlendi)
+    # ====================================================
     total_invested = df['Total Cost ($)'].sum()
     total_current = df['Current Value ($)'].sum()
     total_pnl = df['P/L (Amount)'].sum()
     
-    # Özet Metrikleri Hesaplama
-    total_invested = df['Total Cost ($)'].sum()
-    total_current = df['Current Value ($)'].sum()
-    total_pnl = df['P/L (Amount)'].sum()
-    
-    # --- YENİ: GERÇEKLEŞMİŞ KÂR HESAPLAMASI (GÜNCELLENDİ) ---
     realized_pnl = 0
     for ticker, txs in portfolio_transactions.items():
         for tx in txs:
-            # Eğer o işlemde 'Realized_Profit' yazılmışsa onu cepteki kâra ekle
             realized_pnl += tx.get('Realized_Profit', 0)
 
     st.markdown("---")
     st.markdown("### 📈 Portfolio Summary")
     
-    # 3 sütunu 4 sütuna çıkarıyoruz
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Invested (Aktif Ana Para)", f"${total_invested:,.2f}")
     col2.metric("Current Value (Güncel Değer)", f"${total_current:,.2f}")
     col3.metric("Unrealized P/L (Aktif Kâr)", f"${total_pnl:,.2f}")
     col4.metric("Realized P/L (Cepteki Kâr)", f"${realized_pnl:,.2f}")
     
-    # Güncelleme Saati
     guncel_saat = datetime.now(tz_TR).strftime('%H:%M:%S')
     st.caption(f"Last sync: {guncel_saat} (Source: Yahoo Finance)")
-    # --- YENİ EKLENEN: VARLIK DAĞILIMI (PASTA GRAFİĞİ) ---
+
+    # ====================================================
+    # 2. BÖLÜM: PASTA GRAFİĞİ (Asset Allocation)
+    # ====================================================
     st.markdown("---")
     st.markdown("### 🥧 Asset Allocation")
     
-    # df tablosu halihazırda 'Asset' ve 'Current Value ($)' sütunlarına sahip
     df_pie = df[df['Current Value ($)'] > 0]
     
     if not df_pie.empty:
@@ -205,10 +200,11 @@ if len(results) > 0:
 else:
     st.warning("Ekranda listelenecek geçerli bir veri bulunamadı.")
 
-# --- GEÇMİŞ PORTFÖY PERFORMANSI FONKSİYONU ---
+# ====================================================
+# 3. BÖLÜM: GEÇMİŞ PORTFÖY PERFORMANSI HESAPLAMA FONKSİYONU
+# ====================================================
 @st.cache_data(ttl=3600)
 def fetch_historical_chart_data(transactions_dict):
-    # 1. Bütün işlemleri tek bir listede topla ve tarihe göre sırala
     all_tx = []
     for ticker, txs in transactions_dict.items():
         for tx in txs:
@@ -224,14 +220,12 @@ def fetch_historical_chart_data(transactions_dict):
     
     start_date_str = df_tx['Date'].min().strftime('%Y-%m-%d')
     
-    # 2. En eski alımdan bugüne fiyat verilerini çek
     all_prices = {}
     for ticker in transactions_dict.keys():
         try:
             hist = yf.Ticker(ticker).history(start=start_date_str)
             if not hist.empty:
                 hist.index = hist.index.tz_localize(None)
-                # Altın için ONS -> Gram çevrimi
                 if ticker == 'GC=F':
                     hist['Close'] = hist['Close'] / 31.1035
                 all_prices[ticker] = hist['Close']
@@ -242,7 +236,6 @@ def fetch_historical_chart_data(transactions_dict):
     
     df_prices = pd.DataFrame(all_prices).ffill().dropna(how='all')
     
-    # 3. Günlük Portföy Değeri ve Maliyet Hesaplama
     df_history = pd.DataFrame(index=df_prices.index)
     df_history['Total_Cost'] = 0.0
     df_history['Total_Value'] = 0.0
@@ -262,7 +255,6 @@ def fetch_historical_chart_data(transactions_dict):
         df_history['Total_Value'] += daily_qty * df_prices[ticker]
         df_history['Total_Cost'] += daily_cost
 
-    # 4. Yüzdelik Kar/Zarar (%)
     df_history['P/L (%)'] = np.where(
         df_history['Total_Cost'] > 0, 
         ((df_history['Total_Value'] - df_history['Total_Cost']) / df_history['Total_Cost']) * 100, 
@@ -271,67 +263,55 @@ def fetch_historical_chart_data(transactions_dict):
     
     return df_history
 
-# --- GRAFİĞİ EKRANA ÇİZME ---
-st.markdown("---")
-st.markdown("### 📈 Portfolio Growth Over Time (%)")
-
-# Geçmiş veriyi hesapla
+# ====================================================
+# 4. BÖLÜM: GRAFİKLERİN ÇİZİMİ (Sıralamalar Düzeltildi)
+# ====================================================
 df_history = fetch_historical_chart_data(portfolio_transactions)
-# --- YENİ EKLENEN: VARLIK AKIŞI GRAFİĞİ (MİDAS TARZI) ---
+
 if not df_history.empty:
+    
+    # --- ÜST GRAFİK: VARLIK AKIŞI (MAVİ) ---
+    st.markdown("---")
     st.markdown("### 🌊 Varlık Akışı (Total Portfolio Value)")
     
-    # Alan grafiği (Area Chart) çizimi
     fig_value = px.area(
         df_history, 
         x=df_history.index, 
         y='Total_Value', 
         labels={'index': 'Tarih', 'Total_Value': 'Toplam Değer ($)'}
     )
-    
-    # Midas estetiği: Çizgi altı dolu, modern mavi tonu
     fig_value.update_traces(line_color='#2962FF', fillcolor='rgba(41, 98, 255, 0.2)')
-    
     fig_value.update_layout(
-        hovermode="x unified",
-        xaxis_title="", 
-        yaxis_title="Büyüklük ($)",
-        margin=dict(l=0, r=0, t=30, b=0),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)'
+        hovermode="x unified", xaxis_title="", yaxis_title="Büyüklük ($)",
+        margin=dict(l=0, r=0, t=30, b=0), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)'
     )
     st.plotly_chart(fig_value, use_container_width=True)
-    st.markdown("---")
 
-if not df_history.empty:
+
+    # --- ALT GRAFİK: YÜZDELİK BÜYÜME (YEŞİL) ---
+    st.markdown("---")
+    st.markdown("### 📈 Portfolio Growth Over Time (%)")
+    
     fig = px.line(
         df_history, 
         x=df_history.index, 
         y='P/L (%)', 
         labels={'index': 'Tarih', 'P/L (%)': 'Net Kar / Zarar (%)'}
     )
-    
-    # Başabaş çizgisi
     fig.add_hline(y=0, line_dash="dash", line_color="gray", annotation_text="Maliyet")
-    
-    # Son durum kârdaysa yeşil, zarardaysa kırmızı
     line_color = '#00C853' if df_history['P/L (%)'].iloc[-1] >= 0 else '#D50000'
     fig.update_traces(line_color=line_color, line_width=2)
-    
     fig.update_layout(
-        hovermode="x unified",
-        xaxis_title="", 
-        yaxis_title="Büyüme (%)",
-        margin=dict(l=0, r=0, t=30, b=0),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)'
+        hovermode="x unified", xaxis_title="", yaxis_title="Büyüme (%)",
+        margin=dict(l=0, r=0, t=30, b=0), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)'
     )
-    
     st.plotly_chart(fig, use_container_width=True)
+    
 else:
     st.info("Geçmiş grafik verileri hazırlanıyor...")
-# --- CANLI GÜNCELLEME DÖNGÜSÜ (ASENKRON) ---
-from streamlit_autorefresh import st_autorefresh
 
-# Ekranı dondurmadan arka planda her 60 saniyede bir (60000 milisaniye) verileri günceller
+# ====================================================
+# 5. BÖLÜM: ASENKRON CANLI GÜNCELLEME DÖNGÜSÜ
+# ====================================================
+from streamlit_autorefresh import st_autorefresh
 st_autorefresh(interval=60000, key="portfolio_update")
