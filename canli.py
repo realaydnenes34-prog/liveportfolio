@@ -21,6 +21,8 @@ portfolio_transactions = {
         {'Date': '2026-01-26', 'Quantity': 2.524859813, 'Total_Cost': 406.74},
         {'Date': '2026-02-05', 'Quantity': 1.200408824, 'Total_Cost': 199.99},
         {'Date': '2026-03-04', 'Quantity': 0.866493185, 'Total_Cost': 150.01},
+        # --- YENİ EKLENEN TEMETTÜ İŞLEMİ ---
+        {'Date': '2026-03-31', 'Quantity': 0.0, 'Total_Cost': 0.0, 'Dividend': 0.37},
         {'Date': '2026-04-07', 'Quantity': 0.599059633, 'Total_Cost': 100.37},
         {'Date': '2026-05-15', 'Quantity': 2.084745762, 'Total_Cost': 400.02},
         {'Date': '2026-05-18', 'Quantity': -1.318426326, 'Total_Cost': -227.81, 'Realized_Profit': 20.68}
@@ -138,18 +140,23 @@ if len(results) > 0:
     total_pnl = df['P/L (Amount)'].sum()
     
     realized_pnl = 0
+    total_dividends = 0  # YENİ: Temettü sayacı eklendi
+    
     for ticker, txs in portfolio_transactions.items():
         for tx in txs:
             realized_pnl += tx.get('Realized_Profit', 0)
+            total_dividends += tx.get('Dividend', 0)  # YENİ: Temettüleri topla
 
     st.markdown("---")
     st.markdown("### 📈 Portfolio Summary")
     
-    col1, col2, col3, col4 = st.columns(4)
+    # 4 sütunu 5 sütuna çıkarıyoruz
+    col1, col2, col3, col4, col5 = st.columns(5)
     col1.metric("Total Invested (Aktif Ana Para)", f"${total_invested:,.2f}")
     col2.metric("Current Value (Güncel Değer)", f"${total_current:,.2f}")
     col3.metric("Unrealized P/L (Aktif Kâr)", f"${total_pnl:,.2f}")
     col4.metric("Realized P/L (Cepteki Kâr)", f"${realized_pnl:,.2f}")
+    col5.metric("Dividends (Temettü Geliri)", f"${total_dividends:,.2f}") # YENİ: Temettü kutucuğu
     
     guncel_saat = datetime.now(tz_TR).strftime('%H:%M:%S')
     st.caption(f"Last sync: {guncel_saat} (Source: Yahoo Finance)")
