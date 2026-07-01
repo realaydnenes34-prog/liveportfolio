@@ -17,15 +17,14 @@ portfolio_transactions = {
         # Altın Satışı ve Kârın Ayrılması
         {'Date': '2026-04-29', 'Quantity': -13.15, 'Total_Cost': -1354.0, 'Realized_Profit': 566.0} 
     ],
-    'GRID': [
+   'GRID': [
         {'Date': '2026-01-26', 'Quantity': 2.524859813, 'Total_Cost': 406.74},
         {'Date': '2026-02-05', 'Quantity': 1.200408824, 'Total_Cost': 199.99},
         {'Date': '2026-03-04', 'Quantity': 0.866493185, 'Total_Cost': 150.01},
-        # --- YENİ EKLENEN TEMETTÜ İŞLEMİ ---
         {'Date': '2026-03-31', 'Quantity': 0.0, 'Total_Cost': 0.0, 'Dividend': 0.37},
         {'Date': '2026-04-07', 'Quantity': 0.599059633, 'Total_Cost': 100.37},
         {'Date': '2026-05-15', 'Quantity': 2.084745762, 'Total_Cost': 400.02},
-        {'Date': '2026-05-18', 'Quantity': -1.318426326, 'Total_Cost': -227.81, 'Realized_Profit': 20.68}
+        {'Date': '2026-05-18', 'Quantity': -1.318426326, 'Total_Cost': -227.81, 'Realized_Profit': 20.68},
         # --- 1 TEMMUZ 2026 ÇARŞAMBA: OTOMATİK GERİ YATIRIM (DRIP) ---
         {'Date': '2026-07-01', 'Quantity': 0.019026478, 'Total_Cost': 0.0, 'Dividend': 3.6}
     ]
