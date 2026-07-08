@@ -14,10 +14,9 @@ st.title("📊 Personal Live Portfolio Dashboard")
 portfolio_transactions = {
     'GC=F': [
         {'Date': '2025-05-22', 'Quantity': 13.15, 'Total_Cost': 1354.0},
-        # Altın Satışı ve Kârın Ayrılması
         {'Date': '2026-04-29', 'Quantity': -13.15, 'Total_Cost': -1354.0, 'Realized_Profit': 566.0} 
     ],
-   'GRID': [
+    'GRID': [
         {'Date': '2026-01-26', 'Quantity': 2.524859813, 'Total_Cost': 406.74},
         {'Date': '2026-02-05', 'Quantity': 1.200408824, 'Total_Cost': 199.99},
         {'Date': '2026-03-04', 'Quantity': 0.866493185, 'Total_Cost': 150.01},
@@ -25,8 +24,11 @@ portfolio_transactions = {
         {'Date': '2026-04-07', 'Quantity': 0.599059633, 'Total_Cost': 100.37},
         {'Date': '2026-05-15', 'Quantity': 2.084745762, 'Total_Cost': 400.02},
         {'Date': '2026-05-18', 'Quantity': -1.318426326, 'Total_Cost': -227.81, 'Realized_Profit': 20.68},
-        # --- 1 TEMMUZ 2026 ÇARŞAMBA: OTOMATİK GERİ YATIRIM (DRIP) ---
         {'Date': '2026-07-01', 'Quantity': 0.019026478, 'Total_Cost': 0.0, 'Dividend': 3.6}
+    ],
+    'ASELS.IS': [
+        # 2 adet Aselsan x 379 TL = 758 TL. (Güncel kur 46.85 üzerinden maliyet: 16.17 USD)
+        {'Date': '2026-07-08', 'Quantity': 2.0, 'Total_Cost': 16.17}
     ]
 }
 
@@ -39,12 +41,17 @@ def fetch_portfolio_data(transactions_dict):
     results = []
     errors = [] 
     
+    # YENİ: Anlık USD/TRY kurunu çek
+    try:
+        usd_try_rate = yf.Ticker("USDTRY=X").fast_info.last_price
+    except:
+        usd_try_rate = 46.85 # Hata olursa varsayılan kur
+    
     for ticker, txs in transactions_dict.items():
         try:
             total_quantity = sum(tx['Quantity'] for tx in txs)
             total_cost_all_tx = sum(tx['Total_Cost'] for tx in txs)
             
-            # EĞER POZİSYON KAPANDIYSA tablodaki aktif maliyeti gizle
             if abs(total_quantity) < 1e-6:
                 total_quantity = 0.0
                 total_cost_all_tx = 0.0
@@ -73,13 +80,25 @@ def fetch_portfolio_data(transactions_dict):
                 errors.append(f"⚠️ {ticker}: Fiyat bulunamadı.")
                 continue
             
-            current_price = price_data / 31.1035 if ticker == 'GC=F' else price_data
+            # --- YENİ DÖVİZ ÇEVİRİCİ ---
+            if ticker == 'GC=F':
+                current_price = price_data / 31.1035
+            elif ticker.endswith('.IS'):
+                current_price = price_data / usd_try_rate # BİST hissesini dolara böl
+            else:
+                current_price = price_data
             
             current_value = total_quantity * current_price
             pnl_amount = current_value - total_cost_all_tx
             pnl_percentage = ((current_value - total_cost_all_tx) / total_cost_all_tx) * 100 if total_cost_all_tx > 0 else 0
 
-            display_name = "Physical Gold (Grams)" if ticker == 'GC=F' else ticker
+            # Tabloda isimlerin güzel görünmesi için
+            if ticker == 'GC=F':
+                display_name = "Physical Gold (Grams)"
+            elif ticker.endswith('.IS'):
+                display_name = f"{ticker.replace('.IS', '')} (TRY->USD)"
+            else:
+                display_name = ticker
 
             results.append({
                 'Asset': display_name,
@@ -141,23 +160,22 @@ if len(results) > 0:
     total_pnl = df['P/L (Amount)'].sum()
     
     realized_pnl = 0
-    total_dividends = 0  # YENİ: Temettü sayacı eklendi
+    total_dividends = 0
     
     for ticker, txs in portfolio_transactions.items():
         for tx in txs:
             realized_pnl += tx.get('Realized_Profit', 0)
-            total_dividends += tx.get('Dividend', 0)  # YENİ: Temettüleri topla
+            total_dividends += tx.get('Dividend', 0)
 
     st.markdown("---")
     st.markdown("### 📈 Portfolio Summary")
     
-    # 4 sütunu 5 sütuna çıkarıyoruz
     col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Total Invested (Aktif Ana Para)", f"${total_invested:,.2f}")
-    col2.metric("Current Value (Güncel Değer)", f"${total_current:,.2f}")
-    col3.metric("Unrealized P/L (Aktif Kâr)", f"${total_pnl:,.2f}")
-    col4.metric("Realized P/L (Cepteki Kâr)", f"${realized_pnl:,.2f}")
-    col5.metric("Dividends (Temettü Geliri)", f"${total_dividends:,.2f}") # YENİ: Temettü kutucuğu
+    col1.metric("Total Invested", f"${total_invested:,.2f}")
+    col2.metric("Current Value", f"${total_current:,.2f}")
+    col3.metric("Unrealized P/L", f"${total_pnl:,.2f}")
+    col4.metric("Realized P/L", f"${realized_pnl:,.2f}")
+    col5.metric("Dividends", f"${total_dividends:,.2f}")
     
     guncel_saat = datetime.now(tz_TR).strftime('%H:%M:%S')
     st.caption(f"Last sync: {guncel_saat} (Source: Yahoo Finance)")
@@ -215,14 +233,30 @@ def fetch_historical_chart_data(transactions_dict):
     
     start_date_str = df_tx['Date'].min().strftime('%Y-%m-%d')
     
+    # YENİ: Geçmiş Kur Geçmişi (Aselsan'ın tarihsel verisini dolara çevirmek için)
+    try:
+        usd_hist = yf.Ticker("USDTRY=X").history(start=start_date_str)['Close']
+        usd_hist.index = usd_hist.index.tz_localize(None)
+    except:
+        usd_hist = None
+    
     all_prices = {}
     for ticker in transactions_dict.keys():
         try:
             hist = yf.Ticker(ticker).history(start=start_date_str)
             if not hist.empty:
                 hist.index = hist.index.tz_localize(None)
+                
+                # Kur ve Gram Altın Düzeltmeleri
                 if ticker == 'GC=F':
                     hist['Close'] = hist['Close'] / 31.1035
+                elif ticker.endswith('.IS'):
+                    if usd_hist is not None:
+                        # Aselsan'ın o günkü kapanışını o günkü kura böl (eksik veri varsa doldur)
+                        hist['Close'] = (hist['Close'] / usd_hist).ffill().bfill()
+                    else:
+                        hist['Close'] = hist['Close'] / 46.85
+                        
                 all_prices[ticker] = hist['Close']
         except:
             continue
