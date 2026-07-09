@@ -27,8 +27,10 @@ portfolio_transactions = {
         {'Date': '2026-07-01', 'Quantity': 0.019026478, 'Total_Cost': 0.0, 'Dividend': 3.6}
     ],
     'ASELS.IS': [
-        # 2 adet Aselsan x 379 TL = 758 TL. (Güncel kur 46.85 üzerinden maliyet: 16.17 USD)
-        {'Date': '2026-07-08', 'Quantity': 2.0, 'Total_Cost': 16.17}
+        # 8 Temmuz: 2 adet Aselsan x 379 TL = 758 TL. (Kur ~46.85 üzerinden maliyet: 16.17 USD)
+        {'Date': '2026-07-08', 'Quantity': 2.0, 'Total_Cost': 16.17},
+        # 9 Temmuz: 1 adet Aselsan x 361.50 TL = 361.50 TL. (Kur ~46.85 üzerinden maliyet: 7.72 USD)
+        {'Date': '2026-07-09', 'Quantity': 1.0, 'Total_Cost': 7.72}
     ]
 }
 
