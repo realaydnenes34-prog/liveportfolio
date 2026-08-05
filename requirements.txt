@@ -3,3 +3,4 @@ pandas
 streamlit
 plotly
 streamlit-autorefresh
+starlette<0.38.0
