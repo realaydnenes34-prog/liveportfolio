@@ -24,7 +24,9 @@ portfolio_transactions = {
         {'Date': '2026-04-07', 'Quantity': 0.599059633, 'Total_Cost': 100.37},
         {'Date': '2026-05-15', 'Quantity': 2.084745762, 'Total_Cost': 400.02},
         {'Date': '2026-05-18', 'Quantity': -1.318426326, 'Total_Cost': -227.81, 'Realized_Profit': 20.68},
-        {'Date': '2026-07-01', 'Quantity': 0.019026478, 'Total_Cost': 0.0, 'Dividend': 3.6}
+        {'Date': '2026-07-01', 'Quantity': 0.019026478, 'Total_Cost': 0.0, 'Dividend': 3.6},
+        {'Date': '2026-08-11', 'Quantity': -1.6055168, 'Total_Cost': -276.53, 'Realized_Profit': 23.46}
+
     ],
     'ASELS.IS': [
         # 8 Temmuz: 2 adet Aselsan x 379 TL = 758 TL. (Kur ~46.85 üzerinden maliyet: 16.17 USD)
