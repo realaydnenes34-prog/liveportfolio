@@ -181,9 +181,9 @@ portfolio_transactions = {
         {'Date': '2026-04-07', 'Quantity': 0.599059633, 'Total_Cost': 100.37, 'Note': 'ABD Borsası Alım (Komisyon Dahil)'},
         {'Date': '2026-05-15', 'Quantity': 2.084745762, 'Total_Cost': 400.02, 'Note': 'ABD Borsası Alım (Komisyon Dahil)'},
         {'Date': '2026-05-18', 'Quantity': -1.318426326, 'Total_Cost': -227.81, 'Realized_Profit': 20.68, 'Note': 'Kısmi Satış (+20.68$ Net Kâr)'},
-        {'Date': '2026-07-01', 'Quantity': 0.019026478, 'Total_Cost': 0.0, 'Dividend': 3.60, 'Note': 'Temettü Yeniden Yatırım (DRIP)'},
+        {'Date': '2026-07-01', 'Quantity': 0.019026478, 'Total_Cost': 0.0, 'Dividend': 3.60, 'Note': 'Temettü Yeniden Yatırım (DRIP - 0.019026478 pay)'},
         {'Date': '2026-08-11', 'Quantity': -1.6055168, 'Total_Cost': -276.53, 'Realized_Profit': 23.46, 'Note': 'Kısmi Satış (+23.46$ Net Kâr)'},
-        {'Date': '2026-09-30', 'Quantity': 0.006980331, 'Total_Cost': 1.24, 'Note': '0.006980331 pay x $177.65 (Komisyonsuz Alım)'}
+        {'Date': '2026-09-30', 'Quantity': 0.006980331, 'Total_Cost': 0.0, 'Dividend': 1.24, 'Note': 'Temettü Yeniden Yatırım (DRIP - 0.006980331 pay x $177.65)'}
     ],
 
     # 14. ASELSAN (2 Alış, 1 Satış = 3 İşlem)
@@ -265,6 +265,9 @@ def fetch_portfolio_data(transactions_dict):
             realized_profit = sum(tx.get('Realized_Profit', 0.0) for tx in txs)
             dividends = sum(tx.get('Dividend', 0.0) for tx in txs)
             
+            # Geri yatırılmayan (Nakit) temettüler: DRIP olanlar (Quantity > 0 ve Total_Cost == 0) zaten aktif pay adedinin içindedir
+            cash_dividends = sum(tx.get('Dividend', 0.0) for tx in txs if tx.get('Quantity', 0.0) == 0)
+            
             is_closed = abs(total_quantity) < 1e-6
             if is_closed:
                 total_quantity = 0.0
@@ -343,7 +346,9 @@ def fetch_portfolio_data(transactions_dict):
             daily_return_pct = ((current_price - prev_price_usd) / prev_price_usd) * 100 if (prev_price_usd > 0 and not is_closed) else 0.0
             daily_pnl_usd = total_quantity * (current_price - prev_price_usd) if not is_closed else 0.0
             
-            total_net_ret = float(pnl_amount + realized_profit + dividends)
+            # Açık pozisyonda DRIP payları zaten pnl_amount içinde yer aldığı için sadece nakit temettü eklenir
+            effective_div = dividends if is_closed else cash_dividends
+            total_net_ret = float(pnl_amount + realized_profit + effective_div)
             total_roi_pct = (total_net_ret / total_invested_ever * 100) if total_invested_ever > 0 else 0.0
 
             results.append({
@@ -438,7 +443,7 @@ def fetch_historical_chart_data(transactions_dict, benchmark_ticker=None):
                 q = tx.get('Quantity', 0.0)
                 c = tx.get('Total_Cost', 0.0)
                 r = tx.get('Realized_Profit', 0.0)
-                if q > 0:
+                if q > 0 and c > 0:
                     pts[d] = c / q
                 elif q < 0:
                     pts[d] = (abs(c) + r) / abs(q)
@@ -458,7 +463,7 @@ def fetch_historical_chart_data(transactions_dict, benchmark_ticker=None):
     df_history['Active_Cost'] = 0.0
     df_history['Active_Value'] = 0.0
     df_history['Cum_Realized_PnL'] = 0.0
-    df_history['Cum_Dividends'] = 0.0
+    df_history['Cum_Cash_Dividends'] = 0.0
     
     for ticker in transactions_dict.keys():
         if ticker not in df_prices.columns:
@@ -482,13 +487,15 @@ def fetch_historical_chart_data(transactions_dict, benchmark_ticker=None):
     for _, row in df_tx.iterrows():
         mask = df_history.index >= row['Date']
         df_history.loc[mask, 'Cum_Realized_PnL'] += row['Realized_Profit']
-        df_history.loc[mask, 'Cum_Dividends'] += row['Dividend']
+        # DRIP (Quantity > 0) olanlar zaten Active_Value içinde pay olarak büyüdüğü için çifte sayımı önle
+        if row['Quantity'] == 0:
+            df_history.loc[mask, 'Cum_Cash_Dividends'] += row['Dividend']
 
     df_history['Unrealized_PnL'] = df_history['Active_Value'] - df_history['Active_Cost']
     df_history['Total_Net_Profit'] = (
         df_history['Unrealized_PnL'] + 
         df_history['Cum_Realized_PnL'] + 
-        df_history['Cum_Dividends']
+        df_history['Cum_Cash_Dividends']
     )
     
     df_history['Active_P/L (%)'] = np.where(
@@ -550,7 +557,7 @@ if results:
     
     realized_pnl = df['Realized P/L'].sum()
     total_dividends = df['Dividends'].sum()
-    all_time_net_profit = total_unrealized_pnl + realized_pnl + total_dividends
+    all_time_net_profit = df['Total Net Return'].sum()
 
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     k1.metric("Aktif Portföy Değeri", f"{curr_symbol}{total_current:,.2f}", f"{curr_symbol}{total_daily_pnl:+,.2f} ({total_daily_pct:+.2f}% Bugün)")
@@ -638,7 +645,7 @@ if results:
 
         with col_bar:
             st.subheader("📊 Varlık Bazlı Tüm Zamanlar Net Kazanç Katkısı")
-            st.caption("Açık Kâr + Realize Satış Kârları (Stopajlar Düşülmüş) + Temettü/Nema")
+            st.caption("Açık Kâr (DRIP Dahil) + Realize Satış Kârları (Stopajlar Düşülmüş) + Nakit Temettü/Nema")
             df_bar = df.sort_values('Total Net Return', ascending=True)
             fig_bar = px.bar(
                 df_bar,
