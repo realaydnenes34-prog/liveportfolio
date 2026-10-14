@@ -34,10 +34,11 @@ ASSET_NAMES = {
     'IVY': '⛓️ İstanbul Portföy Blockchain Fonu (IVY)',
     'YAS': '🏢 Yapı Kredi Koç Holding İştirak Fonu (YAS)',
     'TMG': '🌍 İş Portföy Yabancı Hisse Senedi Fonu (TMG)',
-    'USD_NEMA': '💵 Midas USD Nemalandırma (Faiz)'
+    'PPS': '🧭 Pusula Portföy Hisse Senedi Fonu',
+    'USD_NEMA': '💵 Midas Nema Gelirleri (USD & TL)'
 }
 
-# --- YATIRIM PORTFÖYÜ (TÜM İŞLEM GEÇMİŞİ - GÜN GÜN SIRALI) ---
+# --- YATIRIM PORTFÖYÜ (TÜM İŞLEM GEÇMİŞİ - GÜN GÜN SIRALI 102 İŞLEM) ---
 portfolio_transactions = {
     # 1. İŞ PORTFÖY GÜMÜŞ SERBEST FON (15 Alış, 1 Satış = 16 İşlem)
     'IOG': [
@@ -171,7 +172,7 @@ portfolio_transactions = {
         {'Date': '2026-04-29', 'Quantity': -13.15, 'Total_Cost': -1354.0, 'Realized_Profit': 566.0, 'Note': 'Fiziki Altın Satışı (+566$ Realize Kâr)'} 
     ],
 
-    # 13. GRID - NASDAQ CLEAN EDGE SMART GRID ETF (9 İşlem)
+    # 13. GRID - NASDAQ CLEAN EDGE SMART GRID ETF (10 İşlem)
     'GRID': [
         {'Date': '2026-01-26', 'Quantity': 2.524859813, 'Total_Cost': 406.74, 'Note': 'ABD Borsası Alım (Komisyon Dahil)'},
         {'Date': '2026-02-05', 'Quantity': 1.200408824, 'Total_Cost': 199.99, 'Note': 'ABD Borsası Alım (Komisyon Dahil)'},
@@ -181,24 +182,34 @@ portfolio_transactions = {
         {'Date': '2026-05-15', 'Quantity': 2.084745762, 'Total_Cost': 400.02, 'Note': 'ABD Borsası Alım (Komisyon Dahil)'},
         {'Date': '2026-05-18', 'Quantity': -1.318426326, 'Total_Cost': -227.81, 'Realized_Profit': 20.68, 'Note': 'Kısmi Satış (+20.68$ Net Kâr)'},
         {'Date': '2026-07-01', 'Quantity': 0.019026478, 'Total_Cost': 0.0, 'Dividend': 3.60, 'Note': 'Temettü Yeniden Yatırım (DRIP)'},
-        {'Date': '2026-08-11', 'Quantity': -1.6055168, 'Total_Cost': -276.53, 'Realized_Profit': 23.46, 'Note': 'Kısmi Satış (+23.46$ Net Kâr)'}
+        {'Date': '2026-08-11', 'Quantity': -1.6055168, 'Total_Cost': -276.53, 'Realized_Profit': 23.46, 'Note': 'Kısmi Satış (+23.46$ Net Kâr)'},
+        {'Date': '2026-09-30', 'Quantity': 0.006980331, 'Total_Cost': 1.24, 'Note': '0.006980331 pay x $177.65 (Komisyonsuz Alım)'}
     ],
 
-    # 14. ASELSAN (2 İşlem)
+    # 14. ASELSAN (2 Alış, 1 Satış = 3 İşlem)
     'ASELS.IS': [
         {'Date': '2026-07-08', 'Quantity': 2.0, 'Total_Cost': 16.17, 'TRY_Amount': 758.00, 'Note': '2 adet x ₺379,00'},
-        {'Date': '2026-07-09', 'Quantity': 1.0, 'Total_Cost': 7.72, 'TRY_Amount': 361.50, 'Note': '1 adet x ₺361,50'}
+        {'Date': '2026-07-09', 'Quantity': 1.0, 'Total_Cost': 7.72, 'TRY_Amount': 361.50, 'Note': '1 adet x ₺361,50'},
+        {'Date': '2026-09-17', 'Quantity': -3.0, 'Total_Cost': -23.89, 'Realized_Profit': 0.42, 'TRY_Amount': -1139.25, 'Note': 'Satış: 3 pay x ₺379,75 = ₺1.139,25 (Komisyonsuz) | Net Kâr: +₺19,75'}
     ],
 
-    # 15. MİDAS USD NEMALANDIRMA GELİRLERİ (2 İşlem)
+    # 15. PUSULA PORTFÖY HİSSE SENEDİ FONU (1 Alış, 1 Satış = 2 İşlem)
+    'PPS': [
+        {'Date': '2026-08-28', 'Quantity': 352.0, 'Total_Cost': 30.60, 'TRY_Amount': 1444.47, 'Note': '352 pay x ₺4.103595'},
+        {'Date': '2026-09-07', 'Quantity': -352.0, 'Total_Cost': -30.60, 'Realized_Profit': -9.65, 'TRY_Amount': -992.16, 'Note': 'Satış: 352 pay x ₺2.818639 = ₺992,16 | Net Zarar: -₺452,30 (-%31.31)'}
+    ],
+
+    # 16. MİDAS NEMALANDIRMA GELİRLERİ - USD & TL (4 İşlem)
     'USD_NEMA': [
         {'Date': '2026-04-30', 'Quantity': 0.0, 'Total_Cost': 0.0, 'Dividend': 0.04, 'Note': 'Nisan 2026 USD Nema (%3 Oran)'},
-        {'Date': '2026-05-29', 'Quantity': 0.0, 'Total_Cost': 0.0, 'Dividend': 0.33, 'Note': 'Mayıs 2026 USD Nema (%3 Oran)'}
+        {'Date': '2026-05-29', 'Quantity': 0.0, 'Total_Cost': 0.0, 'Dividend': 0.33, 'Note': 'Mayıs 2026 USD Nema (%3 Oran)'},
+        {'Date': '2026-08-27', 'Quantity': 0.0, 'Total_Cost': 0.0, 'Dividend': 0.02, 'TRY_Amount': 1.12, 'Note': 'TL Fon Nema: Brüt ₺1,36 | Stopaj: -₺0,24 | Net: ₺1,12 (Günlük %0,09)'},
+        {'Date': '2026-08-31', 'Quantity': 0.0, 'Total_Cost': 0.0, 'Dividend': 0.06, 'Note': 'Ağustos 2026 USD Nema (%3 Oran)'}
     ]
 }
 
 # Yahoo Finance'te doğrudan çekilemeyen yerel TEFAS fonları ve özel kalemler
-NON_YF_TICKERS = {'IOG', 'YKT', 'IVY', 'YAS', 'TMG', 'AFA', 'HMG', 'HSL', 'USD_NEMA'}
+NON_YF_TICKERS = {'IOG', 'YKT', 'IVY', 'YAS', 'TMG', 'AFA', 'HMG', 'HSL', 'PPS', 'USD_NEMA'}
 
 # --- SIDEBAR (KONTROL PANELİ) ---
 with st.sidebar:
@@ -250,6 +261,7 @@ def fetch_portfolio_data(transactions_dict):
         try:
             total_quantity = sum(tx.get('Quantity', 0.0) for tx in txs)
             total_cost_all_tx = sum(tx.get('Total_Cost', 0.0) for tx in txs)
+            total_invested_ever = sum(tx.get('Total_Cost', 0.0) for tx in txs if tx.get('Total_Cost', 0.0) > 0)
             realized_profit = sum(tx.get('Realized_Profit', 0.0) for tx in txs)
             dividends = sum(tx.get('Dividend', 0.0) for tx in txs)
             
@@ -263,10 +275,12 @@ def fetch_portfolio_data(transactions_dict):
             
             # Eğer pozisyon tamamen kapalıysa ve TEFAS/Nema ise Yahoo Finance'e sormaya gerek yok
             if ticker in NON_YF_TICKERS and is_closed:
+                total_net_ret = float(realized_profit + dividends)
+                total_roi_pct = (total_net_ret / total_invested_ever * 100) if total_invested_ever > 0 else 0.0
                 results.append({
                     'Ticker': ticker,
                     'Asset': display_name,
-                    'Status': 'Kapalı / Gelir',
+                    'Status': 'Pasif Gelir' if ticker == 'USD_NEMA' else 'Kapalı',
                     'Quantity': 0.0,
                     'Avg. Cost': 0.0,
                     'Current Price': 0.0,
@@ -278,7 +292,8 @@ def fetch_portfolio_data(transactions_dict):
                     'Unrealized P/L (%)': 0.0,
                     'Realized P/L': float(realized_profit),
                     'Dividends': float(dividends),
-                    'Total Net Return': float(realized_profit + dividends)
+                    'Total Net Return': total_net_ret,
+                    'Total ROI (%)': float(total_roi_pct)
                 })
                 continue
 
@@ -327,6 +342,9 @@ def fetch_portfolio_data(transactions_dict):
             
             daily_return_pct = ((current_price - prev_price_usd) / prev_price_usd) * 100 if (prev_price_usd > 0 and not is_closed) else 0.0
             daily_pnl_usd = total_quantity * (current_price - prev_price_usd) if not is_closed else 0.0
+            
+            total_net_ret = float(pnl_amount + realized_profit + dividends)
+            total_roi_pct = (total_net_ret / total_invested_ever * 100) if total_invested_ever > 0 else 0.0
 
             results.append({
                 'Ticker': ticker,
@@ -343,7 +361,8 @@ def fetch_portfolio_data(transactions_dict):
                 'Unrealized P/L (%)': float(pnl_percentage),
                 'Realized P/L': float(realized_profit),
                 'Dividends': float(dividends),
-                'Total Net Return': float(pnl_amount + realized_profit + dividends)
+                'Total Net Return': total_net_ret,
+                'Total ROI (%)': float(total_roi_pct)
             })
             
         except Exception as e:
@@ -542,11 +561,16 @@ if results:
     k6.metric("Tüm Zamanlar Net Kâr", f"{curr_symbol}{all_time_net_profit:,.2f}", delta="Toplam Net Kazanç")
     
     guncel_saat = datetime.now(tz_TR).strftime('%H:%M:%S')
-    st.caption(f"⏱️ Son Senkronizasyon: {guncel_saat} | Toplam Kayıtlı İşlem: {sum(len(v) for v in portfolio_transactions.values())} Adet")
+    total_tx_count = sum(len(v) for v in portfolio_transactions.values())
+    st.caption(f"⏱️ Son Senkronizasyon: {guncel_saat} | Toplam Kayıtlı İşlem: {total_tx_count} Adet")
     st.markdown("---")
 
     # --- SEKMELİ GÖRÜNÜM ---
-    tab1, tab2, tab3 = st.tabs(["💼 Varlıklar & Dağılım", "📈 Tarihsel Performans Analizi", "🧾 İşlem Geçmişi (96 Kayıt)"])
+    tab1, tab2, tab3 = st.tabs([
+        "💼 Varlıklar & Dağılım", 
+        "📈 Tarihsel Performans Analizi", 
+        f"🧾 İşlem Geçmişi ({total_tx_count} Kayıt)"
+    ])
 
     # ================= SEKME 1: VARLIKLAR VE PASTA GRAFİĞİ =================
     with tab1:
@@ -561,7 +585,8 @@ if results:
             column_order=[
                 'Asset', 'Status', 'Quantity', 'Avg. Cost', 'Current Price', 
                 'Daily Change (%)', 'Daily P/L', 'Total Cost', 'Current Value', 
-                'Unrealized P/L', 'Unrealized P/L (%)', 'Realized P/L', 'Dividends', 'Total Net Return'
+                'Unrealized P/L', 'Unrealized P/L (%)', 'Realized P/L', 'Dividends', 
+                'Total Net Return', 'Total ROI (%)'
             ],
             column_config={
                 'Asset': st.column_config.TextColumn("Varlık"),
@@ -578,6 +603,7 @@ if results:
                 'Realized P/L': st.column_config.NumberColumn(f"Realize Kâr ({curr_symbol})", format=f"{curr_symbol}%+.2f"),
                 'Dividends': st.column_config.NumberColumn(f"Temettü/Nema ({curr_symbol})", format=f"{curr_symbol}%.2f"),
                 'Total Net Return': st.column_config.NumberColumn(f"Toplam Net Kâr ({curr_symbol})", format=f"{curr_symbol}%+.2f"),
+                'Total ROI (%)': st.column_config.NumberColumn("Toplam Kâr (%)", format="%+.2f%%"),
             }
         )
 
