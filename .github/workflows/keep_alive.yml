@@ -1,0 +1,16 @@
+name: Keep Streamlit App Awake
+
+on:
+  schedule:
+    # Her 6 saatte bir otomatik çalışır
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # İstersen manuel de tetikleyebilirsin
+
+jobs:
+  ping-app:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Streamlit App
+        run: |
+          curl -s -L "https://liveportfolio-nrz2hoaefq3rzmvrnsmzvy.streamlit.app/" > /dev/null
+          echo "Ping gönderildi, uygulama uyanık!"
