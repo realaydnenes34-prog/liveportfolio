@@ -1252,91 +1252,139 @@ if results:
         except Exception as e:
             st.error(f"Teknik analiz grafiği yüklenirken hata: {str(e)}")
 
-    # ================= SEKME 4: OTOMATİK MUHASEBE MOTORU & SİMÜLATÖR =================
+    # ================= SEKME 4: OTOMATİK MUHASEBE MOTORU & KOD ÜRETİCİ =================
     with tab4:
-        st.markdown("#### Otomatik Ağırlıklı Ortalama Maliyet & Kısmi Satış Simülatörü")
-        st.caption("ABD borsası işlemlerinde $1.50 işlem ücreti ve DRIP işlemlerinde $0 komisyon kuralları motor tarafından otomatik uygulanır.")
+        st.markdown("#### Otomatik Maliyet Simülatörü & Yeni İşlem Kod Üretici")
+        st.caption("Sol taraftan herhangi bir hisse/fon seçip işlem simülasyonu yapabilir, sağ tarafta otomatik oluşan kod satırını kopyalayıp canli.py dosyanıza yapıştırabilirsiniz.")
 
-        sim_col1, sim_col2 = st.columns([1.1, 1.3])
-        
-        # Mevcut GRID pozisyonunun motor tarafından hesaplanan güncel değerleri
-        grid_row = df[df['Ticker'] == 'GRID'].iloc[0]
-        cur_grid_qty = float(grid_row['Quantity'])
-        cur_grid_cost_usd = float(grid_row['Total Cost']) / fx_multiplier
-        cur_grid_avg_usd = float(grid_row['Avg. Cost']) / fx_multiplier
-        cur_grid_price_usd = float(grid_row['Current Price']) / fx_multiplier
+        sim_col1, sim_col2 = st.columns([1.15, 1.25])
 
         with sim_col1:
-            st.markdown("##### Canlı Kısmi Satış / Alım Test Aracı (`GRID`)")
-            sim_action = st.radio("Simülasyon İşlem Tipi", options=["Kısmi Satış (SELL)", "Yeni Alım (BUY)", "Temettü Geri Yatırımı (DRIP)"], horizontal=True)
+            st.markdown("##### 1. İşlem Detaylarını Girin / Test Edin")
             
-            if "SELL" in sim_action:
-                sell_pct = st.slider("Satılacak Pozisyon Oranı (%)", min_value=5, max_value=100, value=25, step=5)
-                sim_exec_price = st.number_input("Satış Fiyatı ($)", value=round(cur_grid_price_usd, 2), step=1.0)
-                sim_fee = st.number_input("ABD Borsası Komisyonu ($)", value=1.50, step=0.50)
-                
-                qty_to_sell = cur_grid_qty * (sell_pct / 100.0)
-                gross_proc = qty_to_sell * sim_exec_price
-                net_proc = gross_proc - sim_fee
-                auto_cost_removed = cur_grid_cost_usd * (sell_pct / 100.0)
-                auto_realized_profit = net_proc - auto_cost_removed
-                rem_qty = cur_grid_qty - qty_to_sell
-                rem_cost = cur_grid_cost_usd - auto_cost_removed
-                
-                st.info(
-                    f"**Motor Hesaplama Sonucu:**\n"
-                    f"- **Satılacak Adet:** `{qty_to_sell:.6f} pay` (Mevcut `{cur_grid_qty:.4f}` payın `%{sell_pct}`'i)\n"
-                    f"- **Brüt Satış Tutarı:** `${gross_proc:,.2f}` | **Komisyon:** `-${sim_fee:,.2f}` | **Net Tutar:** `${net_proc:,.2f}`\n"
-                    f"- **Otomatik Düşülen Maliyet:** `-${auto_cost_removed:,.2f}` (Pay başı `${cur_grid_avg_usd:,.2f}` ortalamadan)\n"
-                    f"- **Otomatik Realize Net Kâr:** **`{fmt_currency(auto_realized_profit, '$')}`**\n"
-                    f"- **İşlem Sonrası Kalan:** `{rem_qty:.4f} pay` | **Kalan Aktif Maliyet:** `${rem_cost:,.2f}`"
-                )
-            elif "BUY" in sim_action:
-                buy_usd = st.number_input("Alım Tutarı (Komisyon Hariç $)", value=200.0, step=25.0)
-                sim_exec_price = st.number_input("Alım Fiyatı ($)", value=round(cur_grid_price_usd, 2), step=1.0)
-                sim_fee = st.number_input("ABD Borsası Komisyonu ($)", value=1.50, step=0.50)
-                
-                qty_bought = buy_usd / sim_exec_price if sim_exec_price > 0 else 0.0
-                total_cost_added = buy_usd + sim_fee
-                new_qty = cur_grid_qty + qty_bought
-                new_cost = cur_grid_cost_usd + total_cost_added
-                new_avg = new_cost / new_qty if new_qty > 0 else 0.0
-                
-                st.info(
-                    f"**Motor Hesaplama Sonucu:**\n"
-                    f"- **Alınan Pay:** `+{qty_bought:.6f} pay` | **Maliyete Eklenen (+$1.50 Komisyon Dahil):** `+${total_cost_added:,.2f}`\n"
-                    f"- **Eski Ortalama Maliyet:** `${cur_grid_avg_usd:,.2f}` ➡️ **Yeni Ortalama Maliyet:** **`${new_avg:,.2f}`**\n"
-                    f"- **Yeni Toplam Pay:** `{new_qty:.4f} pay` | **Yeni Aktif Maliyet:** `${new_cost:,.2f}`"
-                )
+            asset_options = list(portfolio_transactions.keys()) + ["+ YENİ VARLIK EKLE"]
+            selected_sim_ticker = st.selectbox(
+                "Varlık Seçin",
+                options=asset_options,
+                index=asset_options.index('GRID') if 'GRID' in asset_options else 0,
+                format_func=lambda x: ASSET_NAMES.get(x, x) if x != "+ YENİ VARLIK EKLE" else "➕ Yeni Hisse / Fon Kodu Gir"
+            )
+
+            if selected_sim_ticker == "+ YENİ VARLIK EKLE":
+                custom_ticker = st.text_input("Yeni Sembol Kodu (Örn: AAPL, THYAO.IS, TLY)", value="NVDA").upper().strip()
+                active_ticker = custom_ticker if custom_ticker else "YENI"
+                cur_qty, cur_cost_usd, cur_avg_usd, cur_price_usd = 0.0, 0.0, 0.0, 100.0
             else:
-                drip_usd = st.number_input("Yatan Temettü Tutarı ($)", value=3.50, step=0.50)
-                sim_exec_price = st.number_input("DRIP Alım Fiyatı ($)", value=round(cur_grid_price_usd, 2), step=1.0)
-                
-                qty_drip = drip_usd / sim_exec_price if sim_exec_price > 0 else 0.0
-                new_qty = cur_grid_qty + qty_drip
-                new_avg = cur_grid_cost_usd / new_qty if new_qty > 0 else 0.0
-                
+                active_ticker = selected_sim_ticker
+                row_match = df[df['Ticker'] == active_ticker]
+                if not row_match.empty:
+                    r_data = row_match.iloc[0]
+                    cur_qty = float(r_data['Quantity'])
+                    cur_cost_usd = float(r_data['Total Cost']) / fx_multiplier
+                    cur_avg_usd = float(r_data['Avg. Cost']) / fx_multiplier
+                    cur_price_usd = float(r_data['Current Price']) / fx_multiplier
+                else:
+                    cur_qty, cur_cost_usd, cur_avg_usd, cur_price_usd = 0.0, 0.0, 0.0, 0.0
+
+            sim_date = st.date_input("İşlem Tarihi", value=datetime.now(tz_TR).date())
+            sim_action = st.radio(
+                "İşlem Tipi",
+                options=["Yeni Alım (BUY)", "Kısmi / Tam Satış (SELL)", "Temettü Geri Yatırımı (DRIP)", "Nakit Temettü / Nema (DIVIDEND)"],
+                horizontal=True
+            )
+
+            default_fee = 1.50 if (active_ticker in US_STOCK_TICKERS and ("BUY" in sim_action or "SELL" in sim_action)) else 0.0
+            sim_note = st.text_input("İşlem Notu (İsteğe Bağlı)", value="")
+
+            # --- SİMÜLASYON HESAPLAMALARI ---
+            if "BUY" in sim_action:
+                c1, c2, c3 = st.columns(3)
+                sim_qty = c1.number_input("Alınan Adet / Pay", min_value=0.000001, value=1.0, step=0.1, format="%.6f")
+                sim_gross = c2.number_input("Brüt Alım Tutarı ($)", min_value=0.01, value=round(max(cur_price_usd, 10.0), 2), step=10.0)
+                sim_fee = c3.number_input("Komisyon ($)", min_value=0.0, value=default_fee, step=0.50)
+
+                total_added = sim_gross + sim_fee
+                new_qty = cur_qty + sim_qty
+                new_cost = cur_cost_usd + total_added
+                new_avg = new_cost / new_qty if new_qty > 0 else 0.0
+
                 st.info(
-                    f"**Motor Hesaplama Sonucu (DRIP - $0.00 Komisyon):**\n"
-                    f"- **Eklenen Bedelsiz Pay:** `+{qty_drip:.6f} pay` | **Komisyon:** `$0.00 (Ücretsiz)`\n"
-                    f"- **Cebinden Çıkan Ek Maliyet:** `$0.00`\n"
-                    f"- **Eski Ortalama Maliyet:** `${cur_grid_avg_usd:,.2f}` ➡️ **Yeni Düşürülmüş Ortalama Maliyet:** **`${new_avg:,.2f}`**"
+                    f"**Alım Simülasyonu Özeti ({active_ticker}):**\n"
+                    f"- **Maliyete Eklenecek Tutar (Komisyon Dahil):** `+${total_added:,.2f}`\n"
+                    f"- **Önceki Adet:** `{cur_qty:.4f}` ➡️ **Yeni Toplam Adet:** `{new_qty:.4f}`\n"
+                    f"- **Önceki Ort. Maliyet:** `${cur_avg_usd:,.2f}` ➡️ **Yeni Ort. Maliyet:** **`${new_avg:,.2f}`**"
                 )
+                generated_line = f"{{'Date': '{sim_date}', 'Action': 'BUY', 'Quantity': {sim_qty}, 'Gross_Amount': {sim_gross:.2f}, 'Fee': {sim_fee:.2f}, 'Note': '{sim_note or 'Alım İşlemi'}'}},"
+
+            elif "SELL" in sim_action:
+                if cur_qty > 0:
+                    sell_mode = st.radio("Satış Miktarı Belirleme", ["Yüzde (%) ile Seç", "Adet Yazarak Seç"], horizontal=True)
+                    if sell_mode == "Yüzde (%) ile Seç":
+                        sell_pct = st.slider("Satılacak Pozisyon Oranı (%)", min_value=1, max_value=100, value=25)
+                        sim_qty = round(cur_qty * (sell_pct / 100.0), 8)
+                    else:
+                        sim_qty = st.number_input("Satılacak Adet", min_value=0.000001, max_value=float(cur_qty), value=float(cur_qty), format="%.6f")
+                        sell_pct = (sim_qty / cur_qty) * 100.0
+                else:
+                    st.warning(f"{active_ticker} için şu an açık pozisyonunuz (0 adet) bulunmuyor, yine de geçmiş satış kodu üretebilirsiniz.")
+                    sim_qty = st.number_input("Satılan Adet", min_value=0.000001, value=1.0, format="%.6f")
+                    sell_pct = 100.0
+
+                c1, c2 = st.columns(2)
+                default_sell_gross = round(sim_qty * cur_price_usd, 2) if cur_price_usd > 0 else 100.0
+                sim_gross_proc = c1.number_input("Toplam Brüt Satış Tutarı ($)", min_value=0.01, value=max(default_sell_gross, 0.01), step=10.0)
+                sim_fee = c2.number_input("Komisyon / Stopaj ($)", min_value=0.0, value=default_fee, step=0.50)
+
+                net_proc = sim_gross_proc - sim_fee
+                cost_removed = cur_cost_usd * (sell_pct / 100.0) if cur_qty > 0 else 0.0
+                realized_pnl = net_proc - cost_removed
+                rem_qty = max(0.0, cur_qty - sim_qty)
+                rem_cost = max(0.0, cur_cost_usd - cost_removed)
+
+                st.info(
+                    f"**Satış Simülasyonu Özeti ({active_ticker} - %{sell_pct:.1f} Satış):**\n"
+                    f"- **Satılacak Adet:** `{sim_qty:.6f} pay` | **Net Ele Geçen:** `${net_proc:,.2f}`\n"
+                    f"- **Otomatik Düşülecek Maliyet:** `-${cost_removed:,.2f}` (Pay başı `${cur_avg_usd:,.2f}` ortalamadan)\n"
+                    f"- **Bu Satıştan Yazılacak Net Kâr/Zarar:** **`{fmt_currency(realized_pnl, '$')}`**\n"
+                    f"- **Satış Sonrası Kalan:** `{rem_qty:.4f} pay` (`${rem_cost:,.2f}` aktif maliyet)"
+                )
+                generated_line = f"{{'Date': '{sim_date}', 'Action': 'SELL', 'Quantity': {sim_qty}, 'Gross_Proceeds': {sim_gross_proc:.2f}, 'Fee': {sim_fee:.2f}, 'Note': '{sim_note or 'Satış İşlemi'}'}},"
+
+            elif "DRIP" in sim_action:
+                c1, c2 = st.columns(2)
+                sim_qty = c1.number_input("Eklenecek Bedelsiz Pay Adedi", min_value=0.000001, value=0.015000, format="%.8f")
+                sim_div = c2.number_input("Yatan Temettü Tutarı ($)", min_value=0.01, value=2.50, step=0.50)
+
+                new_qty = cur_qty + sim_qty
+                new_avg = cur_cost_usd / new_qty if new_qty > 0 else 0.0
+
+                st.info(
+                    f"**DRIP Simülasyonu Özeti ({active_ticker} - Komisyonsuz):**\n"
+                    f"- **Yeni Toplam Pay:** `{cur_qty:.4f}` ➡️ `{new_qty:.6f} pay`\n"
+                    f"- **Eski Ort. Maliyet:** `${cur_avg_usd:,.2f}` ➡️ **Yeni Düşürülmüş Ort. Maliyet:** **`${new_avg:,.2f}`**"
+                )
+                generated_line = f"{{'Date': '{sim_date}', 'Action': 'DRIP', 'Quantity': {sim_qty}, 'Dividend': {sim_div:.2f}, 'Fee': 0.0, 'Note': '{sim_note or 'Temettü Geri Yatırımı (DRIP)'}'}},"
+
+            else:
+                c1, c2 = st.columns(2)
+                sim_div = c1.number_input("Net Temettü / Nema Tutarı ($)", min_value=0.01, value=1.00, step=0.25)
+                sim_fee = c2.number_input("Varsa Stopaj Kesintisi ($)", min_value=0.0, value=0.0, step=0.10)
+                generated_line = f"{{'Date': '{sim_date}', 'Action': 'DIVIDEND', 'Quantity': 0.0, 'Dividend': {sim_div:.2f}, 'Fee': {sim_fee:.2f}, 'Note': '{sim_note or 'Nakit Temettü / Nema'}'}},"
 
         with sim_col2:
-            st.markdown("##### Yeni İşlem Eklerken Kullanacağın Basit Şablon")
-            st.code("""# Artık satışlarda maliyet düşümü veya kâr hesabı yapmana gerek yok!
-# Sadece aşağıdaki 3 satırdan uygun olanı raw_portfolio_transactions içine ekle:
-
-# 1. ABD Borsası Normal Alım ($1.50 komisyonu motor otomatik maliyete ekler):
-{'Date': '2026-10-20', 'Action': 'BUY', 'Quantity': 1.25, 'Gross_Amount': 225.00, 'Fee': 1.50, 'Note': 'GRID Alım'}
-
-# 2. ABD Borsası Kısmi Satış (Düşülecek maliyeti ve Realized_Profit'i motor otomatik hesaplar):
-{'Date': '2026-11-05', 'Action': 'SELL', 'Quantity': 0.85, 'Gross_Proceeds': 165.00, 'Fee': 1.50, 'Note': 'Kısmi Satış'}
-
-# 3. Temettü Geri Yatırımı - DRIP (Komisyon $0, ortalama maliyeti otomatik düşürür):
-{'Date': '2026-12-31', 'Action': 'DRIP', 'Quantity': 0.015, 'Dividend': 2.80, 'Fee': 0.0, 'Note': 'DRIP Yatırımı'}""", language="python")
-
+            st.markdown("##### 2. Otomatik Üretilen Kod Satırı (Kopyala & Yapıştır)")
+            st.success(f"Aşağıdaki satırı kopyalayıp `canli.py` dosyanızdaki `'{active_ticker}'` listesinin en altına yapıştırmanız yeterlidir:")
+            
+            st.code(f"# '{active_ticker}' listesine eklenecek hazır satır:\n{generated_line}", language="python")
+            
+            st.markdown("---")
+            st.markdown("##### Nasıl Çalışır?")
+            st.markdown(
+                "1. **İşlem Öncesi Test:** Midas'ta alım veya satım yapmadan önce sol tarafta rakamları değiştirerek ortalama maliyetinizin nasıl değişeceğini ve kaç dolar net kâr/zarar yazacağını görün.\n"
+                "2. **İşlem Sonrası Kayıt:** İşlemi gerçekleştirdiğinizde sol taraftaki kutulara gerçekleşen adedi ve tutarı yazın.\n"
+                "3. **Tek Tıkla Kopyala:** Sağ üstteki代码 kutusunun köşesindeki **Kopyala** ikonuna tıklayıp GitHub'daki `canli.py` dosyanıza yapıştırın. Maliyet düşümü ve kâr hesabını motor otomatik yapacaktır."
+            )
+            
     # ================= SEKME 5: İŞLEM GEÇMİŞİ LOGU (MOTOR ÇIKTISI) =================
     with tab5:
         st.markdown("#### Muhasebe Motoru İşlem Defteri (Otomatik Maliyet & Kâr Dökümü)")
