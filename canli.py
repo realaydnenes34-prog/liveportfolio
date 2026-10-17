@@ -14,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- X (TWITTER) & TRADINGVIEW TARZI PÜRÜZSÜZ (SMOOTH) CSS STİLİ ---
+# --- SABİT VE TAM EKRAN UYUMLU CSS STİLİ ---
 st.markdown("""
 <style>
     .block-container {
@@ -22,13 +22,9 @@ st.markdown("""
         padding-bottom: 2rem;
     }
 
-    /* Sekme ve Panel Geçişlerinde Pürüzsüz Fade-In Animasyonu */
-    @keyframes smoothSlideUp {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .stTabs [data-baseweb="tab-panel"] {
-        animation: smoothSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    /* Plotly Grafiklerinin Yarım Ekran Açılmasını Engelleyen Tam Genişlik Kuralı */
+    .js-plotly-plot, .plot-container, .svg-container {
+        width: 100% !important;
     }
 
     /* Üst Piyasa Bandı (Ticker Tape) */
@@ -36,9 +32,8 @@ st.markdown("""
         display: flex;
         flex-wrap: wrap;
         gap: 24px;
-        background: rgba(17, 21, 30, 0.9);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: #151924;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 8px;
         padding: 10px 18px;
         margin-bottom: 20px;
@@ -52,15 +47,15 @@ st.markdown("""
         gap: 8px;
     }
     .ticker-label {
-        color: #848E9C;
+        color: #9AA4B2;
         font-weight: 600;
     }
     .ticker-val {
-        color: #EAECEF;
+        color: #FFFFFF;
         font-weight: 700;
     }
 
-    /* Özel KPI Metrik Kartları (Hover & Smooth Transition) */
+    /* Özel KPI Metrik Kartları */
     .kpi-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
@@ -68,19 +63,14 @@ st.markdown("""
         margin-bottom: 22px;
     }
     .kpi-card {
-        background: rgba(21, 25, 36, 0.78);
-        border: 1px solid rgba(255, 255, 255, 0.07);
+        background: #151924;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 10px;
         padding: 16px 18px;
-        transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .kpi-card:hover {
-        transform: translateY(-3px);
-        border-color: rgba(41, 98, 255, 0.45);
-        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
     .kpi-title {
-        color: #848E9C;
+        color: #9AA4B2;
         font-size: 0.73rem;
         font-weight: 600;
         text-transform: uppercase;
@@ -88,7 +78,7 @@ st.markdown("""
         margin-bottom: 8px;
     }
     .kpi-value {
-        color: #EAECEF;
+        color: #FFFFFF;
         font-size: 1.42rem;
         font-weight: 700;
         font-family: 'SF Mono', 'Roboto Mono', monospace;
@@ -105,28 +95,27 @@ st.markdown("""
     }
     .pos-badge {
         color: #00E676;
-        background: rgba(0, 230, 118, 0.12);
+        background: rgba(0, 230, 118, 0.15);
     }
     .neg-badge {
         color: #FF3B69;
-        background: rgba(255, 59, 105, 0.12);
+        background: rgba(255, 59, 105, 0.15);
     }
     .neu-badge {
-        color: #848E9C;
-        background: rgba(132, 142, 156, 0.12);
+        color: #B0B8C4;
+        background: rgba(176, 184, 196, 0.15);
     }
 
     /* Sekme Başlıkları */
     .stTabs [data-baseweb="tab-list"] {
         gap: 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid rgba(132, 142, 156, 0.25);
     }
     .stTabs [data-baseweb="tab"] {
         height: 44px;
         font-weight: 600;
         font-size: 0.83rem;
         letter-spacing: 0.04em;
-        transition: color 0.2s ease;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -157,8 +146,12 @@ NON_YF_TICKERS = {'IOG', 'YKT', 'IVY', 'YAS', 'TMG', 'AFA', 'HMG', 'HSL', 'PPS',
 US_STOCK_TICKERS = {'GRID'}
 US_DEFAULT_FEE = 1.50
 
-# Plotly Pürüzsüz Görünüm Konfigürasyonu (Araç çubuğunu gizler)
-PLOTLY_CONFIG = {'displayModeBar': False, 'scrollZoom': False}
+PLOTLY_CONFIG = {
+    'displayModeBar': 'hover',
+    'displaylogo': False,
+    'responsive': True,
+    'modeBarButtonsToRemove': ['select2d', 'lasso2d', 'autoScale2d', 'toImage']
+}
 
 # --- HAM İŞLEM VERİLERİ (OTOMATİK MUHASEBE MOTORU GİRDİSİ) ---
 raw_portfolio_transactions = {
@@ -509,7 +502,10 @@ with st.sidebar:
 if auto_refresh:
     st_autorefresh(interval=60000, key="portfolio_update")
 
-# --- PİYASA BANDI, SPARKLINE VE PORTFÖY VERİ ÇEKME FONKSİYONU ---
+def clean_zero(val):
+    return 0.0 if abs(float(val)) < 1e-4 else float(val)
+
+# --- PİYASA BANDI VE PORTFÖY VERİ ÇEKME FONKSİYONU ---
 @st.cache_data(ttl=60, show_spinner=False)
 def fetch_portfolio_data(transactions_dict):
     results = []
@@ -561,26 +557,13 @@ def fetch_portfolio_data(transactions_dict):
             avg_cost = total_cost_all_tx / total_quantity if total_quantity > 0 else 0.0
             display_name = ASSET_NAMES.get(ticker, ticker)
             
-            # TEFAS fonları için işlem noktalarından sparkline oluştur
-            tx_sparkline = []
-            for tx in txs:
-                q_val = abs(tx.get('Quantity', 0.0))
-                c_val = abs(tx.get('Total_Cost', 0.0))
-                r_val = tx.get('Realized_Profit', 0.0)
-                if q_val > 0 and c_val > 0:
-                    if tx.get('Action') == 'BUY':
-                        tx_sparkline.append(float(c_val / q_val))
-                    elif tx.get('Action') == 'SELL':
-                        tx_sparkline.append(float((c_val + r_val) / q_val))
-            
             if ticker in NON_YF_TICKERS and is_closed:
-                total_net_ret = float(realized_profit + dividends)
-                total_roi_pct = (total_net_ret / total_invested_ever * 100) if total_invested_ever > 0 else 0.0
+                total_net_ret = clean_zero(realized_profit + dividends)
+                total_roi_pct = clean_zero((total_net_ret / total_invested_ever * 100) if total_invested_ever > 0 else 0.0)
                 results.append({
                     'Ticker': ticker,
                     'Asset': display_name,
                     'Status': 'PASİF GELİR' if ticker == 'USD_NEMA' else 'KAPALI',
-                    'Sparkline': tx_sparkline if len(tx_sparkline) > 1 else [0.0, 0.0],
                     'Quantity': 0.0,
                     'Avg. Cost': 0.0,
                     'Current Price': 0.0,
@@ -590,25 +573,23 @@ def fetch_portfolio_data(transactions_dict):
                     'Current Value': 0.0,
                     'Unrealized P/L': 0.0,
                     'Unrealized P/L (%)': 0.0,
-                    'Realized P/L': float(realized_profit),
-                    'Dividends': float(dividends),
-                    'Fees & Tax': float(total_fees_paid),
+                    'Realized P/L': clean_zero(realized_profit),
+                    'Dividends': clean_zero(dividends),
+                    'Fees & Tax': clean_zero(total_fees_paid),
                     'Total Net Return': total_net_ret,
-                    'Total ROI (%)': float(total_roi_pct)
+                    'Total ROI (%)': total_roi_pct
                 })
                 continue
 
             stock = yf.Ticker(ticker)
             price_data = None
             prev_close = None
-            sparkline_30d = []
             
-            hist_data = stock.history(period="1mo")
+            hist_data = stock.history(period="5d")
             if not hist_data.empty and not hist_data['Close'].dropna().empty:
                 clean_closes = hist_data['Close'].dropna()
                 price_data = float(clean_closes.iloc[-1])
                 prev_close = float(clean_closes.iloc[-2]) if len(clean_closes) > 1 else price_data
-                sparkline_30d = [float(x) for x in clean_closes.tail(22).values]
             
             try:
                 fast_p = stock.fast_info.last_price
@@ -631,45 +612,42 @@ def fetch_portfolio_data(transactions_dict):
             if ticker == 'GC=F':
                 current_price = price_data / 31.1035
                 prev_price_usd = prev_close / 31.1035
-                sparkline_30d = [x / 31.1035 for x in sparkline_30d]
             elif ticker.endswith('.IS'):
                 current_price = price_data / usd_try_rate
                 prev_price_usd = prev_close / usd_try_rate
-                sparkline_30d = [x / usd_try_rate for x in sparkline_30d]
             else:
                 current_price = price_data
                 prev_price_usd = prev_close
 
-            current_value = total_quantity * current_price
-            pnl_amount = current_value - total_cost_all_tx
-            pnl_percentage = (pnl_amount / total_cost_all_tx) * 100 if total_cost_all_tx > 0 else 0.0
+            current_value = clean_zero(total_quantity * current_price)
+            pnl_amount = clean_zero(current_value - total_cost_all_tx)
+            pnl_percentage = clean_zero((pnl_amount / total_cost_all_tx) * 100 if total_cost_all_tx > 0 else 0.0)
             
-            daily_return_pct = ((current_price - prev_price_usd) / prev_price_usd) * 100 if (prev_price_usd > 0 and not is_closed) else 0.0
-            daily_pnl_usd = total_quantity * (current_price - prev_price_usd) if not is_closed else 0.0
+            daily_return_pct = clean_zero(((current_price - prev_price_usd) / prev_price_usd) * 100 if (prev_price_usd > 0 and not is_closed) else 0.0)
+            daily_pnl_usd = clean_zero(total_quantity * (current_price - prev_price_usd) if not is_closed else 0.0)
             
             effective_div = dividends if is_closed else cash_dividends
-            total_net_ret = float(pnl_amount + realized_profit + effective_div)
-            total_roi_pct = (total_net_ret / total_invested_ever * 100) if total_invested_ever > 0 else 0.0
+            total_net_ret = clean_zero(pnl_amount + realized_profit + effective_div)
+            total_roi_pct = clean_zero((total_net_ret / total_invested_ever * 100) if total_invested_ever > 0 else 0.0)
 
             results.append({
                 'Ticker': ticker,
                 'Asset': display_name,
                 'Status': 'KAPALI' if is_closed else 'AÇIK',
-                'Sparkline': sparkline_30d if len(sparkline_30d) > 1 else (tx_sparkline if len(tx_sparkline) > 1 else [0.0, 0.0]),
-                'Quantity': float(total_quantity),
-                'Avg. Cost': float(avg_cost),
-                'Current Price': float(current_price),
-                'Daily Change (%)': float(daily_return_pct),
-                'Daily P/L': float(daily_pnl_usd),
-                'Total Cost': float(total_cost_all_tx),
-                'Current Value': float(current_value),
-                'Unrealized P/L': float(pnl_amount),
-                'Unrealized P/L (%)': float(pnl_percentage),
-                'Realized P/L': float(realized_profit),
-                'Dividends': float(dividends),
-                'Fees & Tax': float(total_fees_paid),
+                'Quantity': clean_zero(total_quantity),
+                'Avg. Cost': clean_zero(avg_cost),
+                'Current Price': clean_zero(current_price if not is_closed else 0.0),
+                'Daily Change (%)': daily_return_pct,
+                'Daily P/L': daily_pnl_usd,
+                'Total Cost': clean_zero(total_cost_all_tx),
+                'Current Value': current_value,
+                'Unrealized P/L': pnl_amount,
+                'Unrealized P/L (%)': pnl_percentage,
+                'Realized P/L': clean_zero(realized_profit),
+                'Dividends': clean_zero(dividends),
+                'Fees & Tax': clean_zero(total_fees_paid),
                 'Total Net Return': total_net_ret,
-                'Total ROI (%)': float(total_roi_pct)
+                'Total ROI (%)': total_roi_pct
             })
             
         except Exception as e:
@@ -818,23 +796,25 @@ def fetch_historical_chart_data(transactions_dict, benchmark_ticker=None):
     return df_history
 
 def fmt_currency(val, sym):
-    sign = "-" if val < -1e-6 else ("+" if val > 1e-6 else "")
+    if abs(val) < 1e-4:
+        return f"{sym}0.00"
+    sign = "-" if val < 0 else "+"
     return f"{sign}{sym}{abs(val):,.2f}"
 
 def badge_class(val):
-    if val > 1e-6:
+    if val > 1e-4:
         return "pos-badge"
-    elif val < -1e-6:
+    elif val < -1e-4:
         return "neg-badge"
     return "neu-badge"
 
-# X (Twitter) Tarzı Pürüzsüz Grafik Düzeni Oluşturucu
-def apply_x_smooth_layout(fig, y_title="", show_range_buttons=True):
+# Tam Ekran ve Sabit X-Tarzı Grafik Düzeni
+def apply_x_smooth_layout(fig, y_title="", show_range_buttons=True, height=420):
     range_selector = dict(
         bgcolor='rgba(21, 25, 36, 0.9)',
         activecolor='#2962FF',
-        font=dict(color='#EAECEF', size=11),
-        bordercolor='rgba(255,255,255,0.08)',
+        font=dict(color='#FFFFFF', size=11),
+        bordercolor='rgba(132, 142, 156, 0.25)',
         borderwidth=1,
         buttons=list([
             dict(count=1, label="1A", step="month", stepmode="backward"),
@@ -846,25 +826,28 @@ def apply_x_smooth_layout(fig, y_title="", show_range_buttons=True):
     ) if show_range_buttons else None
 
     fig.update_layout(
+        autosize=True,
+        height=height,
         hovermode="x unified",
-        transition={'duration': 450, 'easing': 'cubic-in-out'},
         xaxis=dict(
             showgrid=False,
+            automargin=True,
             showspikes=True, spikemode='across', spikesnap='cursor',
-            spikecolor='rgba(255,255,255,0.22)', spikethickness=1, spikedash='solid',
+            spikecolor='rgba(132, 142, 156, 0.45)', spikethickness=1, spikedash='solid',
             rangeselector=range_selector
         ),
         yaxis=dict(
             title=y_title,
             side='right',
+            automargin=True,
             showgrid=True,
-            gridcolor='rgba(255,255,255,0.04)',
+            gridcolor='rgba(132, 142, 156, 0.12)',
             zeroline=False,
             showspikes=True, spikemode='across', spikesnap='cursor',
-            spikecolor='rgba(255,255,255,0.22)', spikethickness=1, spikedash='solid'
+            spikecolor='rgba(132, 142, 156, 0.45)', spikethickness=1, spikedash='solid'
         ),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        margin=dict(l=0, r=0, t=40, b=0),
+        margin=dict(l=10, r=10, t=45, b=10),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)'
     )
@@ -879,7 +862,7 @@ total_tx_count = sum(len(v) for v in portfolio_transactions.values())
 # ÜST PİYASA BANDI (TICKER BAR)
 st.markdown(f"""
 <div class="ticker-bar">
-    <div class="ticker-item"><span class="ticker-label">TERMINAL</span><span class="ticker-val" style="color:#2962FF;">LIVE PORTFOLIO PRO</span></div>
+    <div class="ticker-item"><span class="ticker-label">TERMINAL</span><span class="ticker-val" style="color:#5282FF;">LIVE PORTFOLIO PRO</span></div>
     <div class="ticker-item"><span class="ticker-label">ENGINE</span><span class="ticker-val" style="color:#00E676;">AUTO-WAC ACTIVE</span></div>
     <div class="ticker-item"><span class="ticker-label">USD/TRY</span><span class="ticker-val">₺{usd_try_rate:,.2f}</span></div>
     <div class="ticker-item"><span class="ticker-label">GRAM ALTIN</span><span class="ticker-val">${market_pulse['GOLD_GRAM_USD']:,.2f} (₺{market_pulse['GOLD_GRAM_USD']*usd_try_rate:,.2f})</span></div>
@@ -901,7 +884,7 @@ if results:
         'Current Value', 'Unrealized P/L', 'Realized P/L', 'Dividends', 'Fees & Tax', 'Total Net Return'
     ]
     for col in money_cols:
-        df[col] = df[col] * fx_multiplier
+        df[col] = (df[col] * fx_multiplier).apply(clean_zero)
 
     # --- BÖLÜM 1: ÖZEL BORSA TERMİNALİ KPI KARTLARI ---
     total_invested = df['Total Cost'].sum()
@@ -975,10 +958,10 @@ if results:
     def style_pnl_cells(val):
         if pd.isna(val):
             return ''
-        if val > 1e-6:
-            return 'color: #00E676; font-weight: 600;'
-        elif val < -1e-6:
-            return 'color: #FF3B69; font-weight: 600;'
+        if val > 1e-4:
+            return 'color: #00C853; font-weight: 600;'
+        elif val < -1e-4:
+            return 'color: #FF1744; font-weight: 600;'
         return 'color: #848E9C;'
 
     def style_status_cells(val):
@@ -986,7 +969,7 @@ if results:
             return 'color: #2962FF; font-weight: 700;'
         return 'color: #848E9C;'
 
-    # ================= SEKME 1: VARLIKLAR VE MİNİ TREND (SPARKLINE) TABLOSU =================
+    # ================= SEKME 1: VARLIKLAR VE KAZANÇ GRAFİKLERİ =================
     with tab1:
         df_display = df[df['Status'] == 'AÇIK'].copy() if hide_closed else df.copy()
         df_display = df_display.sort_values(by=['Status', 'Total Net Return'], ascending=[True, False])
@@ -1011,7 +994,7 @@ if results:
             use_container_width=True,
             hide_index=True,
             column_order=[
-                'Asset', 'Status', 'Sparkline', 'Quantity', 'Avg. Cost', 'Current Price', 
+                'Asset', 'Status', 'Quantity', 'Avg. Cost', 'Current Price', 
                 'Daily Change (%)', 'Daily P/L', 'Total Cost', 'Current Value', 
                 'Unrealized P/L', 'Unrealized P/L (%)', 'Realized P/L', 'Dividends', 
                 'Total Net Return', 'Total ROI (%)'
@@ -1019,25 +1002,24 @@ if results:
             column_config={
                 'Asset': st.column_config.TextColumn("Varlık"),
                 'Status': st.column_config.TextColumn("Durum"),
-                'Sparkline': st.column_config.LineChartColumn("Fiyat Trendi", width="small"),
                 'Quantity': st.column_config.NumberColumn("Aktif Adet/Pay", format="%.4f"),
                 'Avg. Cost': st.column_config.NumberColumn(f"Ort. Maliyet ({curr_symbol})", format=f"{curr_symbol}%.2f"),
                 'Current Price': st.column_config.NumberColumn(f"Güncel Fiyat ({curr_symbol})", format=f"{curr_symbol}%.2f"),
-                'Daily Change (%)': st.column_config.NumberColumn("Günlük (%)", format="%+.2f%%"),
-                'Daily P/L': st.column_config.NumberColumn(f"Günlük P/L ({curr_symbol})", format=f"{curr_symbol}%+.2f"),
+                'Daily Change (%)': st.column_config.NumberColumn("Günlük (%)", format="%.2f%%"),
+                'Daily P/L': st.column_config.NumberColumn(f"Günlük P/L ({curr_symbol})", format=f"{curr_symbol}%.2f"),
                 'Total Cost': st.column_config.NumberColumn(f"Aktif Maliyet ({curr_symbol})", format=f"{curr_symbol}%.2f"),
                 'Current Value': st.column_config.NumberColumn(f"Güncel Değer ({curr_symbol})", format=f"{curr_symbol}%.2f"),
-                'Unrealized P/L': st.column_config.NumberColumn(f"Açık P/L ({curr_symbol})", format=f"{curr_symbol}%+.2f"),
-                'Unrealized P/L (%)': st.column_config.NumberColumn("Açık P/L (%)", format="%+.2f%%"),
-                'Realized P/L': st.column_config.NumberColumn(f"Realize Kâr ({curr_symbol})", format=f"{curr_symbol}%+.2f"),
+                'Unrealized P/L': st.column_config.NumberColumn(f"Açık P/L ({curr_symbol})", format=f"{curr_symbol}%.2f"),
+                'Unrealized P/L (%)': st.column_config.NumberColumn("Açık P/L (%)", format="%.2f%%"),
+                'Realized P/L': st.column_config.NumberColumn(f"Realize Kâr ({curr_symbol})", format=f"{curr_symbol}%.2f"),
                 'Dividends': st.column_config.NumberColumn(f"Temettü/Nema ({curr_symbol})", format=f"{curr_symbol}%.2f"),
-                'Total Net Return': st.column_config.NumberColumn(f"Toplam Net Kâr ({curr_symbol})", format=f"{curr_symbol}%+.2f"),
-                'Total ROI (%)': st.column_config.NumberColumn("Toplam Kâr (%)", format="%+.2f%%"),
+                'Total Net Return': st.column_config.NumberColumn(f"Toplam Net Kâr ({curr_symbol})", format=f"{curr_symbol}%.2f"),
+                'Total ROI (%)': st.column_config.NumberColumn("Toplam Kâr (%)", format="%.2f%%"),
             }
         )
 
         st.markdown("---")
-        col_pie, col_bar = st.columns([1, 1.35])
+        col_pie, col_bar = st.columns([1, 1.45])
         
         with col_pie:
             st.markdown("#### Aktif Varlık Dağılımı")
@@ -1056,9 +1038,10 @@ if results:
                     hovertemplate=f"<b>%{{label}}</b><br>Büyüklük: {curr_symbol}%{{value:,.2f}}<br>Pay: %{{percent}}"
                 )
                 fig_pie.update_layout(
+                    autosize=True,
+                    height=520,
                     showlegend=True,
-                    transition={'duration': 400, 'easing': 'cubic-in-out'},
-                    legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
+                    legend=dict(orientation="h", yanchor="bottom", y=-0.12, xanchor="center", x=0.5),
                     margin=dict(t=20, b=40, l=10, r=10),
                     plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)'
@@ -1070,24 +1053,44 @@ if results:
         with col_bar:
             st.markdown("#### Varlık Bazlı Net Kazanç Katkısı")
             df_bar = df.sort_values('Total Net Return', ascending=True).copy()
-            bar_colors = ['#00E676' if v >= 0 else '#FF3B69' for v in df_bar['Total Net Return']]
+            bar_colors = ['#00C853' if v >= 0 else '#FF1744' for v in df_bar['Total Net Return']]
+            
+            max_v = max(df_bar['Total Net Return'].max(), 10.0)
+            min_v = min(df_bar['Total Net Return'].min(), -10.0)
+            
+            # Etiketlerin çubuk dışına taşarken varlık isimleriyle asla çakışmaması için sabit sağ konumlandırma
+            bar_texts = [
+                f"  {fmt_currency(v, curr_symbol)} ({r:+.1f}%)" if abs(r) > 0.01 else f"  {fmt_currency(v, curr_symbol)}"
+                for v, r in zip(df_bar['Total Net Return'], df_bar['Total ROI (%)'])
+            ]
             
             fig_bar = go.Figure(go.Bar(
                 x=df_bar['Total Net Return'],
                 y=df_bar['Asset'],
                 orientation='h',
                 marker_color=bar_colors,
-                text=[f"{fmt_currency(v, curr_symbol)} ({r:+.1f}%)" for v, r in zip(df_bar['Total Net Return'], df_bar['Total ROI (%)'])],
-                textposition='auto'
+                text=bar_texts,
+                textposition='outside',
+                cliponaxis=False,
+                textfont=dict(size=11, family="SF Mono, Roboto Mono, monospace")
             ))
             fig_bar.update_layout(
+                autosize=True,
+                height=520,
+                bargap=0.26,
                 xaxis_title=f"Toplam Net Kâr ({curr_symbol})",
                 yaxis_title="",
-                transition={'duration': 400, 'easing': 'cubic-in-out'},
-                margin=dict(t=10, b=10, l=10, r=10),
+                margin=dict(t=10, b=20, l=10, r=90),
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
-                xaxis=dict(gridcolor='rgba(255,255,255,0.04)', zerolinecolor='rgba(255,255,255,0.2)')
+                xaxis=dict(
+                    range=[min_v * 1.45, max_v * 1.32],
+                    gridcolor='rgba(132, 142, 156, 0.15)',
+                    zeroline=True,
+                    zerolinecolor='rgba(132, 142, 156, 0.4)',
+                    zerolinewidth=1.5
+                ),
+                yaxis=dict(automargin=True)
             )
             st.plotly_chart(fig_bar, use_container_width=True, config=PLOTLY_CONFIG)
 
@@ -1103,9 +1106,9 @@ if results:
         df_history = fetch_historical_chart_data(portfolio_transactions, selected_b_ticker)
 
         if not df_history.empty:
-            st.caption("Grafiklerin sol üst köşesindeki 1A, 3A, 6A, YTD, TÜMÜ butonlarına tıklayarak sayfayı yenilemeden (0ms) pürüzsüz geçiş yapabilirsiniz.")
+            st.caption("Grafiklerin sol üst köşesindeki 1A, 3A, 6A, YTD, TÜMÜ butonlarına tıklayarak zaman aralığını değiştirebilir, çift tıklayarak sıfırlayabilirsiniz.")
 
-            # 1. GRAFİK: Kümülatif Net Kâr Evrimi (X-Style Spline)
+            # 1. GRAFİK: Kümülatif Net Kâr Evrimi
             st.markdown("#### Kümülatif Net Kâr Şeması (Realize Kârlar + Açık Kâr + Temettü & Nema)")
             fig_profit = go.Figure()
             fig_profit.add_trace(go.Scatter(
@@ -1113,15 +1116,15 @@ if results:
                 y=df_history['Total_Net_Profit'] * fx_multiplier,
                 mode='lines',
                 name=f'Kümülatif Net Kâr ({curr_symbol})',
-                line=dict(color='#00E676', width=2.8, shape='spline', smoothing=0.8),
+                line=dict(color='#00C853', width=2.8, shape='spline', smoothing=0.6),
                 fill='tozeroy',
-                fillcolor='rgba(0, 230, 118, 0.12)',
+                fillcolor='rgba(0, 200, 83, 0.12)',
                 hovertemplate=f"<b>%{{x|%d %b %Y}}</b><br>Net Kâr: {curr_symbol}%{{y:,.2f}}<extra></extra>"
             ))
-            fig_profit = apply_x_smooth_layout(fig_profit, y_title=f"Net Kâr ({curr_symbol})")
+            fig_profit = apply_x_smooth_layout(fig_profit, y_title=f"Net Kâr ({curr_symbol})", height=420)
             st.plotly_chart(fig_profit, use_container_width=True, config=PLOTLY_CONFIG)
 
-            # 2. GRAFİK: Aktif Portföy Büyüklüğü ve Maliyet (X-Style Spline)
+            # 2. GRAFİK: Aktif Portföy Büyüklüğü ve Maliyet
             st.markdown("---")
             st.markdown("#### Aktif Portföy Değeri ve Yatırılan Ana Para")
             fig_value = go.Figure()
@@ -1130,24 +1133,24 @@ if results:
                 y=df_history['Active_Value'] * fx_multiplier,
                 mode='lines',
                 name=f'Portföy Değeri ({curr_symbol})',
-                line=dict(color='#2962FF', width=2.8, shape='spline', smoothing=0.8),
+                line=dict(color='#2962FF', width=2.8, shape='spline', smoothing=0.6),
                 fill='tozeroy',
-                fillcolor='rgba(41, 98, 255, 0.13)'
+                fillcolor='rgba(41, 98, 255, 0.12)'
             ))
             fig_value.add_trace(go.Scatter(
                 x=df_history.index,
                 y=df_history['Active_Cost'] * fx_multiplier,
                 mode='lines',
                 name=f'Yatırılan Maliyet ({curr_symbol})',
-                line=dict(color='#FFAB00', width=1.8, dash='dash', shape='hv')
+                line=dict(color='#FFAB00', width=2.0, dash='dash', shape='hv')
             ))
-            fig_value = apply_x_smooth_layout(fig_value, y_title=f"Büyüklük ({curr_symbol})")
+            fig_value = apply_x_smooth_layout(fig_value, y_title=f"Büyüklük ({curr_symbol})", height=420)
             st.plotly_chart(fig_value, use_container_width=True, config=PLOTLY_CONFIG)
 
-            # 3. ÖNERİ 2: AYLIK KÂR / ZARAR ISI HARİTASI (MONTHLY RETURNS HEATMAP)
+            # 3. AYLIK KÂR / ZARAR ISI HARİTASI (MONTHLY RETURNS HEATMAP)
             st.markdown("---")
             st.markdown(f"#### Aylık Net Kazanç Isı Haritası ({curr_symbol})")
-            st.caption("Her hücre, ilgili ay içinde portföyünüzün ürettiği net kâr/zarar değişimini (Satış Kârları + Açık Değer Değişimi + Temettü/Nema) gösterir.")
+            st.caption("Her hücre, ilgili ay içinde portföyünüzün ürettiği net kâr/zarar değişimini gösterir.")
 
             monthly_cum = (df_history['Total_Net_Profit'] * fx_multiplier).resample('ME').last()
             monthly_delta = monthly_cum.diff()
@@ -1181,12 +1184,12 @@ if results:
                 y=[str(y) for y in pivot_hm.index],
                 text=text_vals,
                 texttemplate="%{text}",
-                textfont={"size": 12, "family": "SF Mono, Roboto Mono, monospace"},
+                textfont={"size": 12, "family": "SF Mono, Roboto Mono, monospace", "color": "#FFFFFF"},
                 colorscale=[
                     [0.0, '#D50000'],
-                    [0.45, 'rgba(255, 59, 105, 0.25)'],
-                    [0.5, 'rgba(30, 35, 48, 0.85)'],
-                    [0.55, 'rgba(0, 230, 118, 0.25)'],
+                    [0.45, '#5C1A24'],
+                    [0.5, '#1E2330'],
+                    [0.55, '#144A2E'],
                     [1.0, '#00C853']
                 ],
                 zmin=-max_abs,
@@ -1197,12 +1200,13 @@ if results:
                 hovertemplate=f"<b>Yıl: %{{y}} | Ay: %{{x}}</b><br>Aylık Net Değişim: %{{text}}<extra></extra>"
             ))
             fig_hm.update_layout(
-                height=240,
-                margin=dict(l=0, r=0, t=10, b=10),
+                autosize=True,
+                height=250,
+                margin=dict(l=10, r=10, t=10, b=10),
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
-                xaxis=dict(side='top', showgrid=False),
-                yaxis=dict(showgrid=False, autorange='reversed')
+                xaxis=dict(side='top', showgrid=False, automargin=True),
+                yaxis=dict(showgrid=False, autorange='reversed', automargin=True)
             )
             st.plotly_chart(fig_hm, use_container_width=True, config=PLOTLY_CONFIG)
 
@@ -1297,6 +1301,8 @@ if results:
                     hovertemplate=f"<b>%{{label}}</b><br>Tutar: {curr_symbol}%{{value:,.2f}}<br>Oran: %{{percent}}"
                 )
                 fig_tax.update_layout(
+                    autosize=True,
+                    height=380,
                     showlegend=True,
                     legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
                     margin=dict(t=15, b=35, l=10, r=10),
@@ -1317,11 +1323,13 @@ if results:
                     barmode='stack',
                     text_auto='.2f',
                     color_discrete_map={
-                        'DRIP (Hisseye Dönüşen)': '#00E676',
+                        'DRIP (Hisseye Dönüşen)': '#00C853',
                         'Nakit Temettü / Nema': '#2962FF'
                     }
                 )
                 fig_pas.update_layout(
+                    autosize=True,
+                    height=380,
                     xaxis_title="Dönem",
                     yaxis_title=f"Pasif Gelir ({curr_symbol})",
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
@@ -1388,19 +1396,19 @@ if results:
                         low=ta_df['Low'],
                         close=ta_df['Close'],
                         name=selected_ta_ticker,
-                        increasing_line_color='#00E676',
-                        decreasing_line_color='#FF3B69'
+                        increasing_line_color='#00C853',
+                        decreasing_line_color='#FF1744'
                     ))
                 else:
                     is_up = ta_df['Close'].iloc[-1] >= ta_df['Close'].iloc[0]
-                    s_color = '#00E676' if is_up else '#FF3B69'
-                    s_fill = 'rgba(0, 230, 118, 0.12)' if is_up else 'rgba(255, 59, 105, 0.12)'
+                    s_color = '#00C853' if is_up else '#FF1744'
+                    s_fill = 'rgba(0, 200, 83, 0.12)' if is_up else 'rgba(255, 23, 68, 0.12)'
                     fig_ta.add_trace(go.Scatter(
                         x=ta_df.index,
                         y=ta_df['Close'],
                         mode='lines',
                         name=selected_ta_ticker,
-                        line=dict(color=s_color, width=2.8, shape='spline', smoothing=0.8),
+                        line=dict(color=s_color, width=2.8, shape='spline', smoothing=0.6),
                         fill='tozeroy',
                         fillcolor=s_fill
                     ))
@@ -1408,12 +1416,12 @@ if results:
                 if "SMA 20" in show_sma:
                     fig_ta.add_trace(go.Scatter(
                         x=ta_df.index, y=ta_df['SMA20'], mode='lines', 
-                        name='SMA 20', line=dict(color='#FFAB00', width=1.5, shape='spline')
+                        name='SMA 20', line=dict(color='#FFAB00', width=1.6, shape='spline')
                     ))
                 if "SMA 50" in show_sma:
                     fig_ta.add_trace(go.Scatter(
                         x=ta_df.index, y=ta_df['SMA50'], mode='lines', 
-                        name='SMA 50', line=dict(color='#00B0FF', width=1.5, shape='spline')
+                        name='SMA 50', line=dict(color='#00B0FF', width=1.6, shape='spline')
                     ))
 
                 if "İşlem Noktalarım" in show_sma and selected_ta_ticker in portfolio_transactions:
@@ -1434,16 +1442,16 @@ if results:
                     if buy_dates:
                         fig_ta.add_trace(go.Scatter(
                             x=buy_dates, y=buy_prices, mode='markers', name='ALIM (BUY/DRIP)',
-                            marker=dict(symbol='triangle-up', size=13, color='#00E676', line=dict(width=1, color='#000000'))
+                            marker=dict(symbol='triangle-up', size=13, color='#00C853', line=dict(width=1, color='#000000'))
                         ))
                     if sell_dates:
                         fig_ta.add_trace(go.Scatter(
                             x=sell_dates, y=sell_prices, mode='markers', name='SATIM (SELL)',
-                            marker=dict(symbol='triangle-down', size=13, color='#FF3B69', line=dict(width=1, color='#000000'))
+                            marker=dict(symbol='triangle-down', size=13, color='#FF1744', line=dict(width=1, color='#000000'))
                         ))
 
-                fig_ta.update_layout(xaxis_rangeslider_visible=False, height=500)
-                fig_ta = apply_x_smooth_layout(fig_ta, y_title=f"Fiyat ({unit_label})", show_range_buttons=False)
+                fig_ta.update_layout(xaxis_rangeslider_visible=False)
+                fig_ta = apply_x_smooth_layout(fig_ta, y_title=f"Fiyat ({unit_label})", show_range_buttons=False, height=500)
                 st.plotly_chart(fig_ta, use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.warning("Seçilen enstrüman için tarihsel grafik verisi bulunamadı.")
@@ -1599,13 +1607,13 @@ if results:
                 
             for tx in txs:
                 action = tx.get('Action', 'BUY')
-                q = tx.get('Quantity', 0.0)
-                c = tx.get('Total_Cost', 0.0)
-                r = tx.get('Realized_Profit', 0.0)
-                d = tx.get('Dividend', 0.0)
-                fee = tx.get('Fee', 0.0)
+                q = clean_zero(tx.get('Quantity', 0.0))
+                c = clean_zero(tx.get('Total_Cost', 0.0) * fx_multiplier)
+                r = clean_zero(tx.get('Realized_Profit', 0.0) * fx_multiplier)
+                d = clean_zero(tx.get('Dividend', 0.0) * fx_multiplier)
+                fee = clean_zero(tx.get('Fee', 0.0) * fx_multiplier)
                 sell_ratio = tx.get('Sell_Ratio_Pct', 0.0)
-                running_avg = tx.get('Running_Avg_Cost', 0.0)
+                running_avg = clean_zero(tx.get('Running_Avg_Cost', 0.0) * fx_multiplier)
                 try_amt = tx.get('TRY_Amount', None)
                 note = tx.get('Note', '')
                 
@@ -1623,11 +1631,11 @@ if results:
                     'Varlık': asset_label,
                     'İşlem Tipi': tx_type,
                     'Miktar / Pay': q,
-                    f'Maliyet Değişimi ({curr_symbol})': c * fx_multiplier,
-                    f'İşlem Sonrası Ort. Maliyet ({curr_symbol})': running_avg * fx_multiplier,
-                    f'Komisyon / Stopaj ({curr_symbol})': fee * fx_multiplier,
-                    f'Otomatik Realize Kâr ({curr_symbol})': r * fx_multiplier,
-                    f'Temettü/Nema ({curr_symbol})': d * fx_multiplier,
+                    f'Maliyet Değişimi ({curr_symbol})': c,
+                    f'İşlem Sonrası Ort. Maliyet ({curr_symbol})': running_avg,
+                    f'Komisyon / Stopaj ({curr_symbol})': fee,
+                    f'Otomatik Realize Kâr ({curr_symbol})': r,
+                    f'Temettü/Nema ({curr_symbol})': d,
                     'Orijinal TL (₺)': f"₺{abs(try_amt):,.2f}" if try_amt is not None else "-",
                     'Not': note
                 })
@@ -1636,11 +1644,11 @@ if results:
         
         def style_tx_type(val):
             if "BUY" in val:
-                return 'color: #00E676; font-weight: 600;'
+                return 'color: #00C853; font-weight: 600;'
             elif "SELL" in val:
-                return 'color: #FF3B69; font-weight: 600;'
+                return 'color: #FF1744; font-weight: 600;'
             elif "DRIP" in val or "DIVIDEND" in val:
-                return 'color: #00B0FF; font-weight: 600;'
+                return 'color: #2962FF; font-weight: 600;'
             return ''
 
         try:
