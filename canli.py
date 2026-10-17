@@ -1252,7 +1252,7 @@ if results:
         except Exception as e:
             st.error(f"Teknik analiz grafiği yüklenirken hata: {str(e)}")
 
-    # ================= SEKME 4: OTOMATİK MUHASEBE MOTORU & KOD ÜRETİCİ =================
+   # ================= SEKME 4: OTOMATİK MUHASEBE MOTORU & KOD ÜRETİCİ =================
     with tab4:
         st.markdown("#### Otomatik Maliyet Simülatörü & Yeni İşlem Kod Üretici")
         st.caption("Sol taraftan herhangi bir hisse/fon seçip işlem simülasyonu yapabilir, sağ tarafta otomatik oluşan kod satırını kopyalayıp canli.py dosyanıza yapıştırabilirsiniz.")
@@ -1267,7 +1267,7 @@ if results:
                 "Varlık Seçin",
                 options=asset_options,
                 index=asset_options.index('GRID') if 'GRID' in asset_options else 0,
-                format_func=lambda x: ASSET_NAMES.get(x, x) if x != "+ YENİ VARLIK EKLE" else "➕ Yeni Hisse / Fon Kodu Gir"
+                format_func=lambda x: ASSET_NAMES.get(x, x) if x != "+ YENİ VARLIK EKLE" else "+ Yeni Hisse / Fon Kodu Gir"
             )
 
             if selected_sim_ticker == "+ YENİ VARLIK EKLE":
@@ -1311,8 +1311,8 @@ if results:
                 st.info(
                     f"**Alım Simülasyonu Özeti ({active_ticker}):**\n"
                     f"- **Maliyete Eklenecek Tutar (Komisyon Dahil):** `+${total_added:,.2f}`\n"
-                    f"- **Önceki Adet:** `{cur_qty:.4f}` ➡️ **Yeni Toplam Adet:** `{new_qty:.4f}`\n"
-                    f"- **Önceki Ort. Maliyet:** `${cur_avg_usd:,.2f}` ➡️ **Yeni Ort. Maliyet:** **`${new_avg:,.2f}`**"
+                    f"- **Önceki Adet:** `{cur_qty:.4f}` -> **Yeni Toplam Adet:** `{new_qty:.4f}`\n"
+                    f"- **Önceki Ort. Maliyet:** `${cur_avg_usd:,.2f}` -> **Yeni Ort. Maliyet:** **`${new_avg:,.2f}`**"
                 )
                 generated_line = f"{{'Date': '{sim_date}', 'Action': 'BUY', 'Quantity': {sim_qty}, 'Gross_Amount': {sim_gross:.2f}, 'Fee': {sim_fee:.2f}, 'Note': '{sim_note or 'Alım İşlemi'}'}},"
 
@@ -1360,8 +1360,8 @@ if results:
 
                 st.info(
                     f"**DRIP Simülasyonu Özeti ({active_ticker} - Komisyonsuz):**\n"
-                    f"- **Yeni Toplam Pay:** `{cur_qty:.4f}` ➡️ `{new_qty:.6f} pay`\n"
-                    f"- **Eski Ort. Maliyet:** `${cur_avg_usd:,.2f}` ➡️ **Yeni Düşürülmüş Ort. Maliyet:** **`${new_avg:,.2f}`**"
+                    f"- **Yeni Toplam Pay:** `{cur_qty:.4f}` -> `{new_qty:.6f} pay`\n"
+                    f"- **Eski Ort. Maliyet:** `${cur_avg_usd:,.2f}` -> **Yeni Düşürülmüş Ort. Maliyet:** **`${new_avg:,.2f}`**"
                 )
                 generated_line = f"{{'Date': '{sim_date}', 'Action': 'DRIP', 'Quantity': {sim_qty}, 'Dividend': {sim_div:.2f}, 'Fee': 0.0, 'Note': '{sim_note or 'Temettü Geri Yatırımı (DRIP)'}'}},"
 
@@ -1382,7 +1382,7 @@ if results:
             st.markdown(
                 "1. **İşlem Öncesi Test:** Midas'ta alım veya satım yapmadan önce sol tarafta rakamları değiştirerek ortalama maliyetinizin nasıl değişeceğini ve kaç dolar net kâr/zarar yazacağını görün.\n"
                 "2. **İşlem Sonrası Kayıt:** İşlemi gerçekleştirdiğinizde sol taraftaki kutulara gerçekleşen adedi ve tutarı yazın.\n"
-                "3. **Tek Tıkla Kopyala:** Sağ üstteki代码 kutusunun köşesindeki **Kopyala** ikonuna tıklayıp GitHub'daki `canli.py` dosyanıza yapıştırın. Maliyet düşümü ve kâr hesabını motor otomatik yapacaktır."
+                "3. **Tek Tıkla Kopyala:** Sağ üstteki kod kutusunun köşesindeki **Kopyala** ikonuna tıklayıp GitHub'daki `canli.py` dosyanıza yapıştırın. Maliyet düşümü ve kâr hesabını motor otomatik yapacaktır."
             )
             
     # ================= SEKME 5: İŞLEM GEÇMİŞİ LOGU (MOTOR ÇIKTISI) =================
