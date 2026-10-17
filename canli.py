@@ -14,20 +14,32 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- PROFESYONEL BORSA TERMİNALİ CSS STİLİ ---
+# --- X (TWITTER) & TRADINGVIEW TARZI PÜRÜZSÜZ (SMOOTH) CSS STİLİ ---
 st.markdown("""
 <style>
     .block-container {
-        padding-top: 1.5rem;
+        padding-top: 1.4rem;
         padding-bottom: 2rem;
     }
+
+    /* Sekme ve Panel Geçişlerinde Pürüzsüz Fade-In Animasyonu */
+    @keyframes smoothSlideUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .stTabs [data-baseweb="tab-panel"] {
+        animation: smoothSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Üst Piyasa Bandı (Ticker Tape) */
     .ticker-bar {
         display: flex;
         flex-wrap: wrap;
         gap: 24px;
-        background: rgba(21, 25, 36, 0.85);
+        background: rgba(17, 21, 30, 0.9);
+        backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 6px;
+        border-radius: 8px;
         padding: 10px 18px;
         margin-bottom: 20px;
         font-family: 'SF Mono', 'Roboto Mono', monospace;
@@ -47,25 +59,29 @@ st.markdown("""
         color: #EAECEF;
         font-weight: 700;
     }
+
+    /* Özel KPI Metrik Kartları (Hover & Smooth Transition) */
     .kpi-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
         gap: 14px;
-        margin-bottom: 20px;
+        margin-bottom: 22px;
     }
     .kpi-card {
-        background: rgba(21, 25, 36, 0.75);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 8px;
+        background: rgba(21, 25, 36, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 10px;
         padding: 16px 18px;
-        transition: border-color 0.2s ease;
+        transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .kpi-card:hover {
-        border-color: rgba(255, 255, 255, 0.22);
+        transform: translateY(-3px);
+        border-color: rgba(41, 98, 255, 0.45);
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
     }
     .kpi-title {
         color: #848E9C;
-        font-size: 0.75rem;
+        font-size: 0.73rem;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.06em;
@@ -73,7 +89,7 @@ st.markdown("""
     }
     .kpi-value {
         color: #EAECEF;
-        font-size: 1.45rem;
+        font-size: 1.42rem;
         font-weight: 700;
         font-family: 'SF Mono', 'Roboto Mono', monospace;
         line-height: 1.2;
@@ -81,7 +97,7 @@ st.markdown("""
     }
     .kpi-sub {
         display: inline-block;
-        font-size: 0.76rem;
+        font-size: 0.75rem;
         font-weight: 600;
         font-family: 'SF Mono', 'Roboto Mono', monospace;
         padding: 2px 8px;
@@ -99,15 +115,18 @@ st.markdown("""
         color: #848E9C;
         background: rgba(132, 142, 156, 0.12);
     }
+
+    /* Sekme Başlıkları */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 24px;
+        gap: 20px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
     .stTabs [data-baseweb="tab"] {
         height: 44px;
         font-weight: 600;
-        font-size: 0.85rem;
+        font-size: 0.83rem;
         letter-spacing: 0.04em;
+        transition: color 0.2s ease;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -136,11 +155,12 @@ ASSET_NAMES = {
 
 NON_YF_TICKERS = {'IOG', 'YKT', 'IVY', 'YAS', 'TMG', 'AFA', 'HMG', 'HSL', 'PPS', 'USD_NEMA'}
 US_STOCK_TICKERS = {'GRID'}
-US_DEFAULT_FEE = 1.50  # ABD Borsası standart işlem ücreti ($1.50)
+US_DEFAULT_FEE = 1.50
+
+# Plotly Pürüzsüz Görünüm Konfigürasyonu (Araç çubuğunu gizler)
+PLOTLY_CONFIG = {'displayModeBar': False, 'scrollZoom': False}
 
 # --- HAM İŞLEM VERİLERİ (OTOMATİK MUHASEBE MOTORU GİRDİSİ) ---
-# Not: Satışlarda (SELL) düşülen maliyet ve Realized_Profit artık elle yazılmaz;
-# motor Gross_Proceeds (Brüt Satış) ve Fee (Komisyon/Stopaj) üzerinden otomatik hesaplar!
 raw_portfolio_transactions = {
     # 1. İŞ PORTFÖY GÜMÜŞ SERBEST FON (15 Alış, 1 Satış = 16 İşlem)
     'IOG': [
@@ -159,7 +179,7 @@ raw_portfolio_transactions = {
         {'Date': '2025-09-30', 'Action': 'BUY', 'Quantity': 111.0, 'Gross_Amount': 24.26, 'Fee': 0.0, 'TRY_Amount': 1007.86, 'Note': '111 pay x 9.0798 TL'},
         {'Date': '2025-10-06', 'Action': 'BUY', 'Quantity': 114.0, 'Gross_Amount': 25.31, 'Fee': 0.0, 'TRY_Amount': 1054.73, 'Note': '114 pay x 9.2520 TL'},
         {'Date': '2025-10-08', 'Action': 'BUY', 'Quantity': 321.0, 'Gross_Amount': 72.01, 'Fee': 0.0, 'TRY_Amount': 3004.23, 'Note': '321 pay x 9.3590 TL'},
-        {'Date': '2026-01-07', 'Action': 'SELL', 'Quantity': 801.0, 'Gross_Proceeds': 278.22, 'Fee': 19.18, 'TRY_Amount': 11671.98, 'Note': 'Brüt: 11.671,98 TL | Stopaj: -825,64 TL'}
+        {'Date': '2026-01-07', 'Action': 'SELL', 'Quantity': 801.0, 'Gross_Proceeds': 278.22, 'Fee': 19.18, 'Fee_TRY': 825.64, 'Fee_Type': 'Stopaj Vergisi', 'TRY_Amount': 11671.98, 'Note': 'Brüt: 11.671,98 TL | Stopaj: -825,64 TL'}
     ],
 
     # 2. YAPI KREDİ PORTFÖY ALTIN FONU
@@ -168,14 +188,14 @@ raw_portfolio_transactions = {
         {'Date': '2024-11-05', 'Action': 'BUY', 'Quantity': 69.0, 'Gross_Amount': 0.87, 'Fee': 0.0, 'TRY_Amount': 29.85, 'Note': '69 pay x 0.4325 TL'},
         {'Date': '2024-11-19', 'Action': 'BUY', 'Quantity': 46.0, 'Gross_Amount': 0.57, 'Fee': 0.0, 'TRY_Amount': 19.62, 'Note': '46 pay x 0.4266 TL'},
         {'Date': '2025-04-07', 'Action': 'BUY', 'Quantity': 191.0, 'Gross_Amount': 2.62, 'Fee': 0.0, 'TRY_Amount': 99.69, 'Note': '191 pay x 0.5219 TL'},
-        {'Date': '2025-04-15', 'Action': 'SELL', 'Quantity': 420.0, 'Gross_Proceeds': 6.25, 'Fee': 0.07, 'TRY_Amount': 226.86, 'Note': 'Brüt: 226,86 TL | Stopaj: -2,52 TL'}
+        {'Date': '2025-04-15', 'Action': 'SELL', 'Quantity': 420.0, 'Gross_Proceeds': 6.25, 'Fee': 0.07, 'Fee_TRY': 2.52, 'Fee_Type': 'Stopaj Vergisi', 'TRY_Amount': 226.86, 'Note': 'Brüt: 226,86 TL | Stopaj: -2,52 TL'}
     ],
 
     # 3. İSTANBUL PORTFÖY BLOCKCHAIN FONU
     'IVY': [
         {'Date': '2024-11-04', 'Action': 'BUY', 'Quantity': 17.0, 'Gross_Amount': 1.43, 'Fee': 0.0, 'TRY_Amount': 49.22, 'Note': '17 pay x 2.8954 TL'},
         {'Date': '2024-11-19', 'Action': 'BUY', 'Quantity': 9.0, 'Gross_Amount': 0.85, 'Fee': 0.0, 'TRY_Amount': 29.49, 'Note': '9 pay x 3.2769 TL'},
-        {'Date': '2025-05-02', 'Action': 'SELL', 'Quantity': 26.0, 'Gross_Proceeds': 2.44, 'Fee': 0.02, 'TRY_Amount': 84.85, 'Note': 'Brüt: 84,85 TL | Stopaj: -0,62 TL'}
+        {'Date': '2025-05-02', 'Action': 'SELL', 'Quantity': 26.0, 'Gross_Proceeds': 2.44, 'Fee': 0.02, 'Fee_TRY': 0.62, 'Fee_Type': 'Stopaj Vergisi', 'TRY_Amount': 84.85, 'Note': 'Brüt: 84,85 TL | Stopaj: -0,62 TL'}
     ],
 
     # 4. YAPI KREDİ KOÇ HOLDİNG İŞTİRAK FONU
@@ -192,15 +212,15 @@ raw_portfolio_transactions = {
         {'Date': '2025-01-30', 'Action': 'SELL', 'Quantity': 79.0, 'Gross_Proceeds': 1.80, 'Fee': 0.0, 'TRY_Amount': 62.46, 'Note': 'Satış: 62,46 TL'}
     ],
 
-    # 6. ÇAĞDAŞ CAM SAN. VE TİC. A.Ş. (Parçalı Satış: %50 -> %25 -> %25)
+    # 6. ÇAĞDAŞ CAM SAN. VE TİC. A.Ş.
     'CGCAM.IS': [
-        {'Date': '2024-12-12', 'Action': 'BUY', 'Quantity': 4.0, 'Gross_Amount': 2.29, 'Fee': 0.0, 'TRY_Amount': 80.04, 'Note': 'Halka Arz: 4 adet x 20,00 TL'},
-        {'Date': '2024-12-19', 'Action': 'SELL', 'Quantity': 2.0, 'Gross_Proceeds': 1.52, 'Fee': 0.01, 'TRY_Amount': 52.70, 'Note': '2 adet Satış | Anında Nakit Kom: -0,51 TL'},
-        {'Date': '2024-12-30', 'Action': 'SELL', 'Quantity': 1.0, 'Gross_Proceeds': 1.00, 'Fee': 0.00, 'TRY_Amount': 35.05, 'Note': '1 adet Satış | Anında Nakit Kom: -0,17 TL'},
+        {'Date': '2024-12-12', 'Action': 'BUY', 'Quantity': 4.0, 'Gross_Amount': 2.29, 'Fee': 0.0, 'Fee_TRY': 0.03, 'Fee_Type': 'BIST Komisyon & BSMV', 'TRY_Amount': 80.04, 'Note': 'Halka Arz: 4 adet x 20,00 TL (+0,03 TL Kom.)'},
+        {'Date': '2024-12-19', 'Action': 'SELL', 'Quantity': 2.0, 'Gross_Proceeds': 1.52, 'Fee': 0.01, 'Fee_TRY': 0.53, 'Fee_Type': 'Anında Nakit & Komisyon', 'TRY_Amount': 52.70, 'Note': '2 adet Satış | Anında Nakit Kom: -0,51 TL'},
+        {'Date': '2024-12-30', 'Action': 'SELL', 'Quantity': 1.0, 'Gross_Proceeds': 1.00, 'Fee': 0.00, 'Fee_TRY': 0.18, 'Fee_Type': 'Anında Nakit & Komisyon', 'TRY_Amount': 35.05, 'Note': '1 adet Satış | Anında Nakit Kom: -0,17 TL'},
         {'Date': '2025-03-03', 'Action': 'SELL', 'Quantity': 1.0, 'Gross_Proceeds': 0.74, 'Fee': 0.00, 'TRY_Amount': 26.30, 'Note': '1 adet Satış (Komisyonsuz)'}
     ],
 
-    # 7. AK PORTFÖY AMERİKA YABANCI HİSSE SENEDİ FONU (Parçalı Satış: %50 -> %50)
+    # 7. AK PORTFÖY AMERİKA YABANCI HİSSE SENEDİ FONU
     'AFA': [
         {'Date': '2024-12-13', 'Action': 'BUY', 'Quantity': 27.0, 'Gross_Amount': 0.56, 'Fee': 0.0, 'TRY_Amount': 19.39, 'Note': '27 pay x 0.7182 TL'},
         {'Date': '2024-12-20', 'Action': 'BUY', 'Quantity': 70.0, 'Gross_Amount': 1.41, 'Fee': 0.0, 'TRY_Amount': 49.68, 'Note': '70 pay x 0.7096 TL'},
@@ -215,11 +235,11 @@ raw_portfolio_transactions = {
         {'Date': '2025-07-25', 'Action': 'BUY', 'Quantity': 455.0, 'Gross_Amount': 9.87, 'Fee': 0.0, 'TRY_Amount': 399.40, 'Note': '455 pay x 0.8778 TL'},
         {'Date': '2025-08-18', 'Action': 'BUY', 'Quantity': 111.0, 'Gross_Amount': 2.44, 'Fee': 0.0, 'TRY_Amount': 99.83, 'Note': '111 pay x 0.8993 TL'},
         {'Date': '2025-08-27', 'Action': 'BUY', 'Quantity': 334.0, 'Gross_Amount': 7.32, 'Fee': 0.0, 'TRY_Amount': 300.34, 'Note': '334 pay x 0.8992 TL'},
-        {'Date': '2025-09-25', 'Action': 'SELL', 'Quantity': 1137.0, 'Gross_Proceeds': 26.59, 'Fee': 0.90, 'TRY_Amount': 1049.92, 'Note': '1. Satış (%50): 1.049,92 TL | Stopaj: -37,28 TL'},
-        {'Date': '2025-10-02', 'Action': 'SELL', 'Quantity': 1137.0, 'Gross_Proceeds': 26.99, 'Fee': 0.31, 'TRY_Amount': 1067.73, 'Note': '2. Satış (Kalan %50): 1.067,73 TL | Stopaj: -12,90 TL'}
+        {'Date': '2025-09-25', 'Action': 'SELL', 'Quantity': 1137.0, 'Gross_Proceeds': 26.59, 'Fee': 0.90, 'Fee_TRY': 37.28, 'Fee_Type': 'Stopaj Vergisi', 'TRY_Amount': 1049.92, 'Note': '1. Satış (%50): 1.049,92 TL | Stopaj: -37,28 TL'},
+        {'Date': '2025-10-02', 'Action': 'SELL', 'Quantity': 1137.0, 'Gross_Proceeds': 26.99, 'Fee': 0.31, 'Fee_TRY': 12.90, 'Fee_Type': 'Stopaj Vergisi', 'TRY_Amount': 1067.73, 'Note': '2. Satış (Kalan %50): 1.067,73 TL | Stopaj: -12,90 TL'}
     ],
 
-    # 8. HSBC MUTLAK GETİRİ HİSSE SENEDİ SERBEST FON (Parçalı Satış: %32.71 -> %67.29)
+    # 8. HSBC MUTLAK GETİRİ HİSSE SENEDİ SERBEST FON
     'HMG': [
         {'Date': '2025-01-10', 'Action': 'BUY', 'Quantity': 6914.0, 'Gross_Amount': 8.46, 'Fee': 0.0, 'TRY_Amount': 299.96, 'Note': '6.914 pay x 0.0434 TL'},
         {'Date': '2025-02-10', 'Action': 'BUY', 'Quantity': 6487.0, 'Gross_Amount': 8.33, 'Fee': 0.0, 'TRY_Amount': 299.98, 'Note': '6.487 pay x 0.0462 TL'},
@@ -240,7 +260,7 @@ raw_portfolio_transactions = {
         {'Date': '2025-06-10', 'Action': 'BUY', 'Quantity': 5.0, 'Gross_Amount': 32.89, 'Fee': 0.0, 'TRY_Amount': 1289.94, 'Note': '5 pay x 257.9887 TL'},
         {'Date': '2025-07-21', 'Action': 'BUY', 'Quantity': 1.0, 'Gross_Amount': 6.74, 'Fee': 0.0, 'TRY_Amount': 271.71, 'Note': '1 pay x 271.7117 TL'},
         {'Date': '2025-08-14', 'Action': 'BUY', 'Quantity': 2.0, 'Gross_Amount': 13.69, 'Fee': 0.0, 'TRY_Amount': 558.63, 'Note': '2 pay x 279.3153 TL'},
-        {'Date': '2025-09-17', 'Action': 'SELL', 'Quantity': 73.0, 'Gross_Proceeds': 543.45, 'Fee': 11.59, 'TRY_Amount': 21188.02, 'Note': 'Brüt: 21.188,02 TL | Stopaj: -478,55 TL'}
+        {'Date': '2025-09-17', 'Action': 'SELL', 'Quantity': 73.0, 'Gross_Proceeds': 543.45, 'Fee': 11.59, 'Fee_TRY': 478.55, 'Fee_Type': 'Stopaj Vergisi', 'TRY_Amount': 21188.02, 'Note': 'Brüt: 21.188,02 TL | Stopaj: -478,55 TL'}
     ],
 
     # 10. DARPHANE ALTIN SERTİFİKASI • 0,01 GR ALTIN
@@ -256,7 +276,7 @@ raw_portfolio_transactions = {
         {'Date': '2025-07-07', 'Action': 'BUY', 'Quantity': 5.0, 'Gross_Amount': 5.84, 'Fee': 0.0, 'TRY_Amount': 232.60, 'Note': '5 adet x 46,52 TL'},
         {'Date': '2025-07-09', 'Action': 'BUY', 'Quantity': 2.0, 'Gross_Amount': 2.31, 'Fee': 0.0, 'TRY_Amount': 92.32, 'Note': '2 adet x 46,16 TL (Limit)'},
         {'Date': '2025-08-14', 'Action': 'BUY', 'Quantity': 6.0, 'Gross_Amount': 7.00, 'Fee': 0.0, 'TRY_Amount': 285.90, 'Note': '6 adet x 47,65 TL (Limit)'},
-        {'Date': '2025-09-18', 'Action': 'SELL', 'Quantity': 25.0, 'Gross_Proceeds': 36.31, 'Fee': 0.44, 'TRY_Amount': 1430.00, 'Note': 'Brüt: 1.448,25 TL | Anında Nakit Kom: -18,25 TL'}
+        {'Date': '2025-09-18', 'Action': 'SELL', 'Quantity': 25.0, 'Gross_Proceeds': 36.31, 'Fee': 0.44, 'Fee_TRY': 18.25, 'Fee_Type': 'Anında Nakit & Komisyon', 'TRY_Amount': 1430.00, 'Note': 'Brüt: 1.448,25 TL | Anında Nakit Kom: -18,25 TL'}
     ],
 
     # 11. COCA-COLA İÇECEK A.Ş.
@@ -274,17 +294,17 @@ raw_portfolio_transactions = {
         {'Date': '2026-04-29', 'Action': 'SELL', 'Quantity': 13.15, 'Gross_Proceeds': 1920.0, 'Fee': 0.0, 'Note': 'Fiziki Altın Satışı'} 
     ],
 
-    # 13. GRID - NASDAQ CLEAN EDGE SMART GRID ETF (ABD Borsası: Alım/Satım $1.50 Komisyon, DRIP $0 Komisyon)
+    # 13. GRID - NASDAQ CLEAN EDGE SMART GRID ETF
     'GRID': [
-        {'Date': '2026-01-26', 'Action': 'BUY', 'Quantity': 2.524859813, 'Gross_Amount': 405.24, 'Fee': 1.50, 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
-        {'Date': '2026-02-05', 'Action': 'BUY', 'Quantity': 1.200408824, 'Gross_Amount': 198.49, 'Fee': 1.50, 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
-        {'Date': '2026-03-04', 'Action': 'BUY', 'Quantity': 0.866493185, 'Gross_Amount': 148.51, 'Fee': 1.50, 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
+        {'Date': '2026-01-26', 'Action': 'BUY', 'Quantity': 2.524859813, 'Gross_Amount': 405.24, 'Fee': 1.50, 'Fee_Type': 'ABD Borsası Komisyonu', 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
+        {'Date': '2026-02-05', 'Action': 'BUY', 'Quantity': 1.200408824, 'Gross_Amount': 198.49, 'Fee': 1.50, 'Fee_Type': 'ABD Borsası Komisyonu', 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
+        {'Date': '2026-03-04', 'Action': 'BUY', 'Quantity': 0.866493185, 'Gross_Amount': 148.51, 'Fee': 1.50, 'Fee_Type': 'ABD Borsası Komisyonu', 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
         {'Date': '2026-03-31', 'Action': 'DIVIDEND', 'Quantity': 0.0, 'Dividend': 0.37, 'Fee': 0.0, 'Note': 'Nakit Temettü'},
-        {'Date': '2026-04-07', 'Action': 'BUY', 'Quantity': 0.599059633, 'Gross_Amount': 98.87, 'Fee': 1.50, 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
-        {'Date': '2026-05-15', 'Action': 'BUY', 'Quantity': 2.084745762, 'Gross_Amount': 398.52, 'Fee': 1.50, 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
-        {'Date': '2026-05-18', 'Action': 'SELL', 'Quantity': 1.318426326, 'Gross_Proceeds': 249.99, 'Fee': 1.50, 'Note': 'Kısmi Satış ($1.50 Komisyon)'},
+        {'Date': '2026-04-07', 'Action': 'BUY', 'Quantity': 0.599059633, 'Gross_Amount': 98.87, 'Fee': 1.50, 'Fee_Type': 'ABD Borsası Komisyonu', 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
+        {'Date': '2026-05-15', 'Action': 'BUY', 'Quantity': 2.084745762, 'Gross_Amount': 398.52, 'Fee': 1.50, 'Fee_Type': 'ABD Borsası Komisyonu', 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
+        {'Date': '2026-05-18', 'Action': 'SELL', 'Quantity': 1.318426326, 'Gross_Proceeds': 249.99, 'Fee': 1.50, 'Fee_Type': 'ABD Borsası Komisyonu', 'Note': 'Kısmi Satış ($1.50 Komisyon)'},
         {'Date': '2026-07-01', 'Action': 'DRIP', 'Quantity': 0.019026478, 'Dividend': 3.60, 'Fee': 0.0, 'Note': 'Temettü Geri Yatırımı (DRIP - Komisyonsuz)'},
-        {'Date': '2026-08-11', 'Action': 'SELL', 'Quantity': 1.6055168, 'Gross_Proceeds': 301.49, 'Fee': 1.50, 'Note': 'Kısmi Satış ($1.50 Komisyon)'},
+        {'Date': '2026-08-11', 'Action': 'SELL', 'Quantity': 1.6055168, 'Gross_Proceeds': 301.49, 'Fee': 1.50, 'Fee_Type': 'ABD Borsası Komisyonu', 'Note': 'Kısmi Satış ($1.50 Komisyon)'},
         {'Date': '2026-09-30', 'Action': 'DRIP', 'Quantity': 0.006980331, 'Dividend': 1.24, 'Fee': 0.0, 'Note': 'Temettü Geri Yatırımı (DRIP - Komisyonsuz x $177.65)'}
     ],
 
@@ -305,7 +325,7 @@ raw_portfolio_transactions = {
     'USD_NEMA': [
         {'Date': '2026-04-30', 'Action': 'DIVIDEND', 'Quantity': 0.0, 'Dividend': 0.04, 'Fee': 0.0, 'Note': 'Nisan 2026 USD Nema (%3 Oran)'},
         {'Date': '2026-05-29', 'Action': 'DIVIDEND', 'Quantity': 0.0, 'Dividend': 0.33, 'Fee': 0.0, 'Note': 'Mayıs 2026 USD Nema (%3 Oran)'},
-        {'Date': '2026-08-27', 'Action': 'DIVIDEND', 'Quantity': 0.0, 'Dividend': 0.02, 'Fee': 0.0, 'TRY_Amount': 1.12, 'Note': 'TL Fon Nema: Brüt 1,36 TL | Stopaj: -0,24 TL | Net: 1,12 TL'},
+        {'Date': '2026-08-27', 'Action': 'DIVIDEND', 'Quantity': 0.0, 'Dividend': 0.025, 'Fee': 0.005, 'Fee_TRY': 0.24, 'Fee_Type': 'Stopaj Vergisi', 'TRY_Amount': 1.12, 'Note': 'TL Fon Nema: Brüt 1,36 TL | Stopaj: -0,24 TL | Net: 1,12 TL'},
         {'Date': '2026-08-31', 'Action': 'DIVIDEND', 'Quantity': 0.0, 'Dividend': 0.06, 'Fee': 0.0, 'Note': 'Ağustos 2026 USD Nema (%3 Oran)'}
     ]
 }
@@ -314,15 +334,9 @@ raw_portfolio_transactions = {
 # OTOMATİK MALİYET VE KÂR HESAPLAMA MOTORU (WEIGHTED AVERAGE COST / AUTO-LEDGER)
 # ==============================================================================
 def run_accounting_engine(raw_tx_dict):
-    """
-    Ham alım/satım/temettü verilerini okur; ABD borsası $1.50 komisyon kuralını,
-    DRIP $0 komisyon kuralını ve kısmi satışlardaki ağırlıklı ortalama maliyet
-    düşümünü otomatik hesaplayarak işlenmiş muhasebe defterini üretir.
-    """
     processed_dict = {}
     
     for ticker, raw_list in raw_tx_dict.items():
-        # İşlemleri tarihe göre sırala (aynı gün içinde önce BUY/DRIP, sonra SELL)
         action_priority = {'BUY': 1, 'DRIP': 2, 'DIVIDEND': 3, 'SELL': 4}
         sorted_txs = sorted(
             raw_list, 
@@ -338,9 +352,10 @@ def run_accounting_engine(raw_tx_dict):
             date_str = tx['Date']
             qty = abs(float(tx.get('Quantity', 0.0)))
             try_amt = tx.get('TRY_Amount', None)
+            fee_try = tx.get('Fee_TRY', None)
+            fee_type = tx.get('Fee_Type', None)
             note = tx.get('Note', '')
             
-            # Komisyon Kuralı: ABD hisselerinde BUY/SELL için varsayılan $1.50, DRIP/DIVIDEND için $0.00
             if 'Fee' in tx:
                 fee = float(tx['Fee'])
             else:
@@ -348,6 +363,9 @@ def run_accounting_engine(raw_tx_dict):
                     fee = US_DEFAULT_FEE
                 else:
                     fee = 0.0
+                    
+            if fee > 0 and not fee_type:
+                fee_type = 'ABD Borsası Komisyonu' if ticker in US_STOCK_TICKERS else 'İşlem Komisyonu / Vergi'
                     
             if action == 'BUY':
                 gross_amt = float(tx.get('Gross_Amount', tx.get('Total_Cost', 0.0) - fee))
@@ -365,6 +383,8 @@ def run_accounting_engine(raw_tx_dict):
                     'Realized_Profit': 0.0,
                     'Dividend': 0.0,
                     'Fee': fee,
+                    'Fee_TRY': fee_try,
+                    'Fee_Type': fee_type,
                     'Sell_Ratio_Pct': 0.0,
                     'Running_Qty': running_qty,
                     'Running_Avg_Cost': avg_cost_now,
@@ -373,7 +393,6 @@ def run_accounting_engine(raw_tx_dict):
                 })
                 
             elif action == 'DRIP':
-                # Temettü geri yatırımı: Komisyon $0, cebinden çıkan ana para $0, pay adedi artar, ort. maliyet düşer!
                 div_amt = float(tx.get('Dividend', 0.0))
                 running_qty += qty
                 avg_cost_now = running_cost / running_qty if running_qty > 0 else 0.0
@@ -386,6 +405,8 @@ def run_accounting_engine(raw_tx_dict):
                     'Realized_Profit': 0.0,
                     'Dividend': div_amt,
                     'Fee': 0.0,
+                    'Fee_TRY': None,
+                    'Fee_Type': None,
                     'Sell_Ratio_Pct': 0.0,
                     'Running_Qty': running_qty,
                     'Running_Avg_Cost': avg_cost_now,
@@ -394,12 +415,10 @@ def run_accounting_engine(raw_tx_dict):
                 })
                 
             elif action == 'SELL':
-                # Satış öncesi ağırlıklı ortalama maliyet ve satılan pay oranı (%)
                 avg_cost_before_sale = running_cost / running_qty if running_qty > 0 else 0.0
                 sell_ratio = (qty / running_qty) if running_qty > 0 else 1.0
                 sell_ratio = min(sell_ratio, 1.0)
                 
-                # Düşülecek maliyet (Tam satışsa kalan tüm maliyeti kapat, kısmi satışsa oransal düş)
                 if abs(running_qty - qty) < 1e-6:
                     cost_removed = round(running_cost, 2)
                 else:
@@ -425,6 +444,8 @@ def run_accounting_engine(raw_tx_dict):
                     'Realized_Profit': realized_pnl,
                     'Dividend': 0.0,
                     'Fee': fee,
+                    'Fee_TRY': fee_try,
+                    'Fee_Type': fee_type,
                     'Gross_Proceeds': gross_proceeds,
                     'Net_Proceeds': net_proceeds,
                     'Sell_Ratio_Pct': sell_ratio * 100.0,
@@ -435,7 +456,7 @@ def run_accounting_engine(raw_tx_dict):
                 })
                 
             elif action == 'DIVIDEND':
-                div_amt = float(tx.get('Dividend', 0.0)) - fee
+                div_amt = round(float(tx.get('Dividend', 0.0)) - fee, 4)
                 avg_cost_now = running_cost / running_qty if running_qty > 0 else 0.0
                 processed_list.append({
                     'Date': date_str,
@@ -445,6 +466,8 @@ def run_accounting_engine(raw_tx_dict):
                     'Realized_Profit': 0.0,
                     'Dividend': div_amt,
                     'Fee': fee,
+                    'Fee_TRY': fee_try,
+                    'Fee_Type': fee_type,
                     'Sell_Ratio_Pct': 0.0,
                     'Running_Qty': running_qty,
                     'Running_Avg_Cost': avg_cost_now,
@@ -456,7 +479,6 @@ def run_accounting_engine(raw_tx_dict):
         
     return processed_dict
 
-# Motoru çalıştır ve tüm işlemleri otomatik hesapla
 portfolio_transactions = run_accounting_engine(raw_portfolio_transactions)
 
 # --- SIDEBAR (TERMİNAL KONTROL PANELİ) ---
@@ -487,7 +509,7 @@ with st.sidebar:
 if auto_refresh:
     st_autorefresh(interval=60000, key="portfolio_update")
 
-# --- PİYASA BANDI VE PORTFÖY VERİ ÇEKME FONKSİYONU ---
+# --- PİYASA BANDI, SPARKLINE VE PORTFÖY VERİ ÇEKME FONKSİYONU ---
 @st.cache_data(ttl=60, show_spinner=False)
 def fetch_portfolio_data(transactions_dict):
     results = []
@@ -539,6 +561,18 @@ def fetch_portfolio_data(transactions_dict):
             avg_cost = total_cost_all_tx / total_quantity if total_quantity > 0 else 0.0
             display_name = ASSET_NAMES.get(ticker, ticker)
             
+            # TEFAS fonları için işlem noktalarından sparkline oluştur
+            tx_sparkline = []
+            for tx in txs:
+                q_val = abs(tx.get('Quantity', 0.0))
+                c_val = abs(tx.get('Total_Cost', 0.0))
+                r_val = tx.get('Realized_Profit', 0.0)
+                if q_val > 0 and c_val > 0:
+                    if tx.get('Action') == 'BUY':
+                        tx_sparkline.append(float(c_val / q_val))
+                    elif tx.get('Action') == 'SELL':
+                        tx_sparkline.append(float((c_val + r_val) / q_val))
+            
             if ticker in NON_YF_TICKERS and is_closed:
                 total_net_ret = float(realized_profit + dividends)
                 total_roi_pct = (total_net_ret / total_invested_ever * 100) if total_invested_ever > 0 else 0.0
@@ -546,6 +580,7 @@ def fetch_portfolio_data(transactions_dict):
                     'Ticker': ticker,
                     'Asset': display_name,
                     'Status': 'PASİF GELİR' if ticker == 'USD_NEMA' else 'KAPALI',
+                    'Sparkline': tx_sparkline if len(tx_sparkline) > 1 else [0.0, 0.0],
                     'Quantity': 0.0,
                     'Avg. Cost': 0.0,
                     'Current Price': 0.0,
@@ -566,12 +601,14 @@ def fetch_portfolio_data(transactions_dict):
             stock = yf.Ticker(ticker)
             price_data = None
             prev_close = None
+            sparkline_30d = []
             
-            hist_data = stock.history(period="5d")
+            hist_data = stock.history(period="1mo")
             if not hist_data.empty and not hist_data['Close'].dropna().empty:
                 clean_closes = hist_data['Close'].dropna()
                 price_data = float(clean_closes.iloc[-1])
                 prev_close = float(clean_closes.iloc[-2]) if len(clean_closes) > 1 else price_data
+                sparkline_30d = [float(x) for x in clean_closes.tail(22).values]
             
             try:
                 fast_p = stock.fast_info.last_price
@@ -594,9 +631,11 @@ def fetch_portfolio_data(transactions_dict):
             if ticker == 'GC=F':
                 current_price = price_data / 31.1035
                 prev_price_usd = prev_close / 31.1035
+                sparkline_30d = [x / 31.1035 for x in sparkline_30d]
             elif ticker.endswith('.IS'):
                 current_price = price_data / usd_try_rate
                 prev_price_usd = prev_close / usd_try_rate
+                sparkline_30d = [x / usd_try_rate for x in sparkline_30d]
             else:
                 current_price = price_data
                 prev_price_usd = prev_close
@@ -616,6 +655,7 @@ def fetch_portfolio_data(transactions_dict):
                 'Ticker': ticker,
                 'Asset': display_name,
                 'Status': 'KAPALI' if is_closed else 'AÇIK',
+                'Sparkline': sparkline_30d if len(sparkline_30d) > 1 else (tx_sparkline if len(tx_sparkline) > 1 else [0.0, 0.0]),
                 'Quantity': float(total_quantity),
                 'Avg. Cost': float(avg_cost),
                 'Current Price': float(current_price),
@@ -788,6 +828,48 @@ def badge_class(val):
         return "neg-badge"
     return "neu-badge"
 
+# X (Twitter) Tarzı Pürüzsüz Grafik Düzeni Oluşturucu
+def apply_x_smooth_layout(fig, y_title="", show_range_buttons=True):
+    range_selector = dict(
+        bgcolor='rgba(21, 25, 36, 0.9)',
+        activecolor='#2962FF',
+        font=dict(color='#EAECEF', size=11),
+        bordercolor='rgba(255,255,255,0.08)',
+        borderwidth=1,
+        buttons=list([
+            dict(count=1, label="1A", step="month", stepmode="backward"),
+            dict(count=3, label="3A", step="month", stepmode="backward"),
+            dict(count=6, label="6A", step="month", stepmode="backward"),
+            dict(count=1, label="YTD", step="year", stepmode="todate"),
+            dict(step="all", label="TÜMÜ")
+        ])
+    ) if show_range_buttons else None
+
+    fig.update_layout(
+        hovermode="x unified",
+        transition={'duration': 450, 'easing': 'cubic-in-out'},
+        xaxis=dict(
+            showgrid=False,
+            showspikes=True, spikemode='across', spikesnap='cursor',
+            spikecolor='rgba(255,255,255,0.22)', spikethickness=1, spikedash='solid',
+            rangeselector=range_selector
+        ),
+        yaxis=dict(
+            title=y_title,
+            side='right',
+            showgrid=True,
+            gridcolor='rgba(255,255,255,0.04)',
+            zeroline=False,
+            showspikes=True, spikemode='across', spikesnap='cursor',
+            spikecolor='rgba(255,255,255,0.22)', spikethickness=1, spikedash='solid'
+        ),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        margin=dict(l=0, r=0, t=40, b=0),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)'
+    )
+    return fig
+
 # --- ANA VERİ ÇAĞRISI VE BAŞLIK ---
 results, errors, usd_try_rate, market_pulse = fetch_portfolio_data(portfolio_transactions)
 fx_multiplier = 1.0 if "USD" in base_currency else usd_try_rate
@@ -860,7 +942,7 @@ if results:
         <div class="kpi-card">
             <div class="kpi-title">Realize Kâr (Satışlar)</div>
             <div class="kpi-value">{fmt_currency(realized_pnl, curr_symbol)}</div>
-            <div class="kpi-sub {real_cls}">Otomatik Hesaplanan Net</div>
+            <div class="kpi-sub {real_cls}">Vergi & Komisyon Sonrası Net</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-title">Temettü & Nema Geliri</div>
@@ -876,15 +958,15 @@ if results:
     """, unsafe_allow_html=True)
 
     # --- SEKMELİ GÖRÜNÜM ---
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "PORTFÖY VE VARLIK ÖZETİ", 
-        "PERFORMANS VE ANALİTİK", 
+        "PERFORMANS & ISI HARİTASI", 
+        "VERGİ, KOMİSYON & PASİF GELİR",
         "TEKNİK ANALİZ TERMİNALİ",
         "MUHASEBE MOTORU & SİMÜLATÖR",
         f"İŞLEM DEFTERİ ({total_tx_count} KAYIT)"
     ])
 
-    # Tablo Renklendirme Yardımcıları
     pnl_color_cols = [
         'Daily Change (%)', 'Daily P/L', 'Unrealized P/L', 
         'Unrealized P/L (%)', 'Realized P/L', 'Total Net Return', 'Total ROI (%)'
@@ -904,7 +986,7 @@ if results:
             return 'color: #2962FF; font-weight: 700;'
         return 'color: #848E9C;'
 
-    # ================= SEKME 1: VARLIKLAR VE PASTA GRAFİĞİ =================
+    # ================= SEKME 1: VARLIKLAR VE MİNİ TREND (SPARKLINE) TABLOSU =================
     with tab1:
         df_display = df[df['Status'] == 'AÇIK'].copy() if hide_closed else df.copy()
         df_display = df_display.sort_values(by=['Status', 'Total Net Return'], ascending=[True, False])
@@ -929,7 +1011,7 @@ if results:
             use_container_width=True,
             hide_index=True,
             column_order=[
-                'Asset', 'Status', 'Quantity', 'Avg. Cost', 'Current Price', 
+                'Asset', 'Status', 'Sparkline', 'Quantity', 'Avg. Cost', 'Current Price', 
                 'Daily Change (%)', 'Daily P/L', 'Total Cost', 'Current Value', 
                 'Unrealized P/L', 'Unrealized P/L (%)', 'Realized P/L', 'Dividends', 
                 'Total Net Return', 'Total ROI (%)'
@@ -937,6 +1019,7 @@ if results:
             column_config={
                 'Asset': st.column_config.TextColumn("Varlık"),
                 'Status': st.column_config.TextColumn("Durum"),
+                'Sparkline': st.column_config.LineChartColumn("Fiyat Trendi", width="small"),
                 'Quantity': st.column_config.NumberColumn("Aktif Adet/Pay", format="%.4f"),
                 'Avg. Cost': st.column_config.NumberColumn(f"Ort. Maliyet ({curr_symbol})", format=f"{curr_symbol}%.2f"),
                 'Current Price': st.column_config.NumberColumn(f"Güncel Fiyat ({curr_symbol})", format=f"{curr_symbol}%.2f"),
@@ -964,7 +1047,7 @@ if results:
                     df_pie, 
                     values='Current Value', 
                     names='Asset',
-                    hole=0.55,
+                    hole=0.58,
                     color_discrete_sequence=['#2962FF', '#00E676', '#FFAB00', '#00B0FF', '#AA00FF']
                 )
                 fig_pie.update_traces(
@@ -974,12 +1057,13 @@ if results:
                 )
                 fig_pie.update_layout(
                     showlegend=True,
+                    transition={'duration': 400, 'easing': 'cubic-in-out'},
                     legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
                     margin=dict(t=20, b=40, l=10, r=10),
                     plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)'
                 )
-                st.plotly_chart(fig_pie, use_container_width=True)
+                st.plotly_chart(fig_pie, use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.info("Açık pozisyon bulunmuyor.")
 
@@ -999,14 +1083,15 @@ if results:
             fig_bar.update_layout(
                 xaxis_title=f"Toplam Net Kâr ({curr_symbol})",
                 yaxis_title="",
+                transition={'duration': 400, 'easing': 'cubic-in-out'},
                 margin=dict(t=10, b=10, l=10, r=10),
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
-                xaxis=dict(gridcolor='rgba(255,255,255,0.06)', zerolinecolor='rgba(255,255,255,0.2)')
+                xaxis=dict(gridcolor='rgba(255,255,255,0.04)', zerolinecolor='rgba(255,255,255,0.2)')
             )
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, use_container_width=True, config=PLOTLY_CONFIG)
 
-    # ================= SEKME 2: TARİHSEL PERFORMANS =================
+    # ================= SEKME 2: X-TARZI PÜRÜZSÜZ GRAFİKLER VE AYLIK ISI HARİTASI =================
     with tab2:
         b_map = {
             "Yok": None,
@@ -1018,128 +1103,248 @@ if results:
         df_history = fetch_historical_chart_data(portfolio_transactions, selected_b_ticker)
 
         if not df_history.empty:
-            time_filter = st.radio(
-                "Zaman Aralığı",
-                options=["1A", "3A", "6A", "YTD (Yılbaşı)", "TÜMÜ (2024'ten Beri)"],
-                index=4,
-                horizontal=True
-            )
-            
-            end_dt = df_history.index.max()
-            if time_filter == "1A":
-                start_dt = end_dt - pd.DateOffset(months=1)
-            elif time_filter == "3A":
-                start_dt = end_dt - pd.DateOffset(months=3)
-            elif time_filter == "6A":
-                start_dt = end_dt - pd.DateOffset(months=6)
-            elif time_filter == "YTD (Yılbaşı)":
-                start_dt = pd.Timestamp(year=end_dt.year, month=1, day=1)
-            else:
-                start_dt = df_history.index.min()
-                
-            df_hist_filtered = df_history[df_history.index >= start_dt].copy()
+            st.caption("Grafiklerin sol üst köşesindeki 1A, 3A, 6A, YTD, TÜMÜ butonlarına tıklayarak sayfayı yenilemeden (0ms) pürüzsüz geçiş yapabilirsiniz.")
 
-            tv_xaxis = dict(
-                showspikes=True, spikemode='across', spikesnap='cursor', 
-                spikecolor='#848E9C', spikethickness=1, spikedash='dash',
-                gridcolor='rgba(255,255,255,0.05)'
-            )
-            tv_yaxis = dict(
-                showspikes=True, spikemode='across', spikesnap='cursor', 
-                spikecolor='#848E9C', spikethickness=1, spikedash='dash',
-                gridcolor='rgba(255,255,255,0.05)'
-            )
+            # 1. GRAFİK: Kümülatif Net Kâr Evrimi (X-Style Spline)
+            st.markdown("#### Kümülatif Net Kâr Şeması (Realize Kârlar + Açık Kâr + Temettü & Nema)")
+            fig_profit = go.Figure()
+            fig_profit.add_trace(go.Scatter(
+                x=df_history.index,
+                y=df_history['Total_Net_Profit'] * fx_multiplier,
+                mode='lines',
+                name=f'Kümülatif Net Kâr ({curr_symbol})',
+                line=dict(color='#00E676', width=2.8, shape='spline', smoothing=0.8),
+                fill='tozeroy',
+                fillcolor='rgba(0, 230, 118, 0.12)',
+                hovertemplate=f"<b>%{{x|%d %b %Y}}</b><br>Net Kâr: {curr_symbol}%{{y:,.2f}}<extra></extra>"
+            ))
+            fig_profit = apply_x_smooth_layout(fig_profit, y_title=f"Net Kâr ({curr_symbol})")
+            st.plotly_chart(fig_profit, use_container_width=True, config=PLOTLY_CONFIG)
 
+            # 2. GRAFİK: Aktif Portföy Büyüklüğü ve Maliyet (X-Style Spline)
+            st.markdown("---")
             st.markdown("#### Aktif Portföy Değeri ve Yatırılan Ana Para")
             fig_value = go.Figure()
             fig_value.add_trace(go.Scatter(
-                x=df_hist_filtered.index,
-                y=df_hist_filtered['Active_Value'] * fx_multiplier,
+                x=df_history.index,
+                y=df_history['Active_Value'] * fx_multiplier,
                 mode='lines',
                 name=f'Portföy Değeri ({curr_symbol})',
-                line=dict(color='#2962FF', width=2.5),
+                line=dict(color='#2962FF', width=2.8, shape='spline', smoothing=0.8),
                 fill='tozeroy',
-                fillcolor='rgba(41, 98, 255, 0.14)'
+                fillcolor='rgba(41, 98, 255, 0.13)'
             ))
             fig_value.add_trace(go.Scatter(
-                x=df_hist_filtered.index,
-                y=df_hist_filtered['Active_Cost'] * fx_multiplier,
+                x=df_history.index,
+                y=df_history['Active_Cost'] * fx_multiplier,
                 mode='lines',
                 name=f'Yatırılan Maliyet ({curr_symbol})',
-                line=dict(color='#FFAB00', width=1.8, dash='dash')
+                line=dict(color='#FFAB00', width=1.8, dash='dash', shape='hv')
             ))
-            fig_value.update_layout(
-                hovermode="x unified",
-                xaxis=tv_xaxis,
-                yaxis=tv_yaxis,
-                yaxis_title=f"Büyüklük ({curr_symbol})",
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                margin=dict(l=0, r=0, t=30, b=0),
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
-            )
-            st.plotly_chart(fig_value, use_container_width=True)
+            fig_value = apply_x_smooth_layout(fig_value, y_title=f"Büyüklük ({curr_symbol})")
+            st.plotly_chart(fig_value, use_container_width=True, config=PLOTLY_CONFIG)
 
+            # 3. ÖNERİ 2: AYLIK KÂR / ZARAR ISI HARİTASI (MONTHLY RETURNS HEATMAP)
             st.markdown("---")
-            st.markdown("#### Kümülatif Net Kâr Evrimi (Realize Kârlar + Açık Kâr + Temettü & Nema)")
-            fig_profit = go.Figure()
-            fig_profit.add_trace(go.Scatter(
-                x=df_hist_filtered.index,
-                y=df_hist_filtered['Total_Net_Profit'] * fx_multiplier,
-                mode='lines',
-                name=f'Kümülatif Net Kâr ({curr_symbol})',
-                line=dict(color='#00E676', width=2.5),
-                fill='tozeroy',
-                fillcolor='rgba(0, 230, 118, 0.14)'
-            ))
-            fig_profit.update_layout(
-                hovermode="x unified",
-                xaxis=tv_xaxis,
-                yaxis=tv_yaxis,
-                yaxis_title=f"Net Kâr ({curr_symbol})",
-                margin=dict(l=0, r=0, t=20, b=0),
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
+            st.markdown(f"#### Aylık Net Kazanç Isı Haritası ({curr_symbol})")
+            st.caption("Her hücre, ilgili ay içinde portföyünüzün ürettiği net kâr/zarar değişimini (Satış Kârları + Açık Değer Değişimi + Temettü/Nema) gösterir.")
+
+            monthly_cum = (df_history['Total_Net_Profit'] * fx_multiplier).resample('ME').last()
+            monthly_delta = monthly_cum.diff()
+            monthly_delta.iloc[0] = monthly_cum.iloc[0]
+
+            df_hm = pd.DataFrame({
+                'Year': monthly_delta.index.year,
+                'Month': monthly_delta.index.month,
+                'Net_PnL': monthly_delta.values
+            })
+
+            month_names = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara']
+            pivot_hm = df_hm.pivot(index='Year', columns='Month', values='Net_PnL')
+            for m in range(1, 13):
+                if m not in pivot_hm.columns:
+                    pivot_hm[m] = np.nan
+            pivot_hm = pivot_hm[range(1, 13)]
+            pivot_hm.columns = month_names
+
+            z_vals = pivot_hm.values
+            text_vals = np.where(
+                np.isnan(z_vals), 
+                "", 
+                np.vectorize(lambda v: f"{fmt_currency(v, curr_symbol)}")(np.nan_to_num(z_vals))
             )
-            st.plotly_chart(fig_profit, use_container_width=True)
 
-            st.markdown("---")
-            st.markdown("#### Aktif Portföy Getirisi (%) ve Benchmark Kıyaslaması")
-            fig_pct = go.Figure()
-            
-            line_color = '#00E676' if df_hist_filtered['Active_P/L (%)'].iloc[-1] >= 0 else '#FF3B69'
-            fig_pct.add_trace(go.Scatter(
-                x=df_hist_filtered.index,
-                y=df_hist_filtered['Active_P/L (%)'],
-                mode='lines',
-                name='Portföy P/L (%)',
-                line=dict(color=line_color, width=2.5)
+            max_abs = max(abs(np.nanmin(z_vals)), abs(np.nanmax(z_vals)), 1.0)
+            fig_hm = go.Figure(data=go.Heatmap(
+                z=z_vals,
+                x=month_names,
+                y=[str(y) for y in pivot_hm.index],
+                text=text_vals,
+                texttemplate="%{text}",
+                textfont={"size": 12, "family": "SF Mono, Roboto Mono, monospace"},
+                colorscale=[
+                    [0.0, '#D50000'],
+                    [0.45, 'rgba(255, 59, 105, 0.25)'],
+                    [0.5, 'rgba(30, 35, 48, 0.85)'],
+                    [0.55, 'rgba(0, 230, 118, 0.25)'],
+                    [1.0, '#00C853']
+                ],
+                zmin=-max_abs,
+                zmax=max_abs,
+                showscale=False,
+                xgap=4,
+                ygap=4,
+                hovertemplate=f"<b>Yıl: %{{y}} | Ay: %{{x}}</b><br>Aylık Net Değişim: %{{text}}<extra></extra>"
             ))
-            
-            if 'Benchmark (%)' in df_hist_filtered.columns:
-                fig_pct.add_trace(go.Scatter(
-                    x=df_hist_filtered.index,
-                    y=df_hist_filtered['Benchmark (%)'],
-                    mode='lines',
-                    name=benchmark_choice,
-                    line=dict(color='#AA00FF', width=2, dash='dot')
-                ))
-
-            fig_pct.add_hline(y=0, line_dash="dash", line_color="#848E9C", annotation_text="Başabaş (0%)")
-            fig_pct.update_layout(
-                hovermode="x unified",
-                xaxis=tv_xaxis,
-                yaxis=tv_yaxis,
-                yaxis_title="Getiri (%)",
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                margin=dict(l=0, r=0, t=30, b=0),
+            fig_hm.update_layout(
+                height=240,
+                margin=dict(l=0, r=0, t=10, b=10),
                 plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
+                paper_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(side='top', showgrid=False),
+                yaxis=dict(showgrid=False, autorange='reversed')
             )
-            st.plotly_chart(fig_pct, use_container_width=True)
+            st.plotly_chart(fig_hm, use_container_width=True, config=PLOTLY_CONFIG)
 
-    # ================= SEKME 3: TEKNİK ANALİZ TERMİNALİ =================
+    # ================= SEKME 3: VERGİ (STOPAJ), KOMİSYON & PASİF GELİR ANALİZ PANELİ =================
     with tab3:
+        st.markdown("#### Vergi (Stopaj), Borsa Komisyonu ve Pasif Gelir Analizi")
+
+        fee_records = []
+        passive_records = []
+
+        for ticker, txs in portfolio_transactions.items():
+            asset_label = ASSET_NAMES.get(ticker, ticker)
+            for tx in txs:
+                f_usd = tx.get('Fee', 0.0)
+                f_try = tx.get('Fee_TRY', None)
+                f_type = tx.get('Fee_Type', 'Komisyon / Vergi')
+                div_usd = tx.get('Dividend', 0.0)
+
+                if f_usd > 0 or (f_try is not None and f_try > 0):
+                    fee_records.append({
+                        'Tarih': tx['Date'],
+                        'Varlık': asset_label,
+                        'Kesinti Türü': f_type,
+                        'Tutar_USD': f_usd,
+                        'Orijinal_TL': f_try if f_try is not None else 0.0,
+                        'Detay': tx.get('Note', '')
+                    })
+
+                if div_usd > 0:
+                    passive_records.append({
+                        'Tarih': pd.to_datetime(tx['Date']),
+                        'Ay': pd.to_datetime(tx['Date']).strftime('%Y-%m'),
+                        'Varlık': asset_label,
+                        'Gelir Tipi': 'DRIP (Hisseye Dönüşen)' if tx.get('Action') == 'DRIP' else 'Nakit Temettü / Nema',
+                        'Tutar_USD': div_usd,
+                        'Not': tx.get('Note', '')
+                    })
+
+        df_fees = pd.DataFrame(fee_records)
+        df_passive = pd.DataFrame(passive_records)
+
+        total_fees_val = (df_fees['Tutar_USD'].sum() * fx_multiplier) if not df_fees.empty else 0.0
+        total_stopaj_try = df_fees[df_fees['Kesinti Türü'] == 'Stopaj Vergisi']['Orijinal_TL'].sum() if not df_fees.empty else 0.0
+        total_us_comm_usd = df_fees[df_fees['Kesinti Türü'] == 'ABD Borsası Komisyonu']['Tutar_USD'].sum() if not df_fees.empty else 0.0
+        total_aninda_try = df_fees[df_fees['Kesinti Türü'] == 'Anında Nakit & Komisyon']['Orijinal_TL'].sum() if not df_fees.empty else 0.0
+
+        gross_profit_before_fees = all_time_net_profit + total_fees_val
+        fee_drag_pct = (total_fees_val / gross_profit_before_fees * 100) if gross_profit_before_fees > 0 else 0.0
+
+        st.markdown(f"""
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-title">Brüt Kazanç (Kesinti Öncesi)</div>
+                <div class="kpi-value">{curr_symbol}{gross_profit_before_fees:,.2f}</div>
+                <div class="kpi-sub pos-badge">Tüm Zamanlar Brüt Üretim</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Toplam Stopaj & Komisyon</div>
+                <div class="kpi-value">-{curr_symbol}{total_fees_val:,.2f}</div>
+                <div class="kpi-sub neg-badge">Brüt Kârın %{fee_drag_pct:.2f}'si Kesildi</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Ödenen Fon/Nema Stopajı</div>
+                <div class="kpi-value">₺{total_stopaj_try:,.2f}</div>
+                <div class="kpi-sub neu-badge">Resmi Stopaj Kesintileri Toplamı</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">ABD Borsa & Anında Nakit Kom.</div>
+                <div class="kpi-value">${total_us_comm_usd:,.2f} + ₺{total_aninda_try:,.2f}</div>
+                <div class="kpi-sub neu-badge">Midas İşlem & Takas Masrafları</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col_tax1, col_tax2 = st.columns([1, 1.2])
+
+        with col_tax1:
+            st.markdown("#### Kesinti ve Vergi Kırılımı")
+            if not df_fees.empty:
+                df_fee_grp = df_fees.groupby('Kesinti Türü', as_index=False)['Tutar_USD'].sum()
+                df_fee_grp['Tutar_Display'] = df_fee_grp['Tutar_USD'] * fx_multiplier
+                fig_tax = px.pie(
+                    df_fee_grp,
+                    values='Tutar_Display',
+                    names='Kesinti Türü',
+                    hole=0.58,
+                    color_discrete_sequence=['#FF3B69', '#FFAB00', '#AA00FF', '#00B0FF']
+                )
+                fig_tax.update_traces(
+                    textposition='inside',
+                    textinfo='percent+label',
+                    hovertemplate=f"<b>%{{label}}</b><br>Tutar: {curr_symbol}%{{value:,.2f}}<br>Oran: %{{percent}}"
+                )
+                fig_tax.update_layout(
+                    showlegend=True,
+                    legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
+                    margin=dict(t=15, b=35, l=10, r=10),
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)'
+                )
+                st.plotly_chart(fig_tax, use_container_width=True, config=PLOTLY_CONFIG)
+
+        with col_tax2:
+            st.markdown("#### Aylık Pasif Gelir Akışı (Temettü, DRIP & Nema)")
+            if not df_passive.empty:
+                df_passive['Tutar_Display'] = df_passive['Tutar_USD'] * fx_multiplier
+                fig_pas = px.bar(
+                    df_passive,
+                    x='Ay',
+                    y='Tutar_Display',
+                    color='Gelir Tipi',
+                    barmode='stack',
+                    text_auto='.2f',
+                    color_discrete_map={
+                        'DRIP (Hisseye Dönüşen)': '#00E676',
+                        'Nakit Temettü / Nema': '#2962FF'
+                    }
+                )
+                fig_pas.update_layout(
+                    xaxis_title="Dönem",
+                    yaxis_title=f"Pasif Gelir ({curr_symbol})",
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                    margin=dict(t=30, b=10, l=10, r=10),
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)'
+                )
+                st.plotly_chart(fig_pas, use_container_width=True, config=PLOTLY_CONFIG)
+
+        st.markdown("---")
+        st.markdown("#### Kesilen Tüm Vergi (Stopaj) ve Komisyonların Detaylı Listesi")
+        if not df_fees.empty:
+            df_fees_disp = df_fees.sort_values('Tarih', ascending=False).copy()
+            df_fees_disp[f'Tutar ({curr_symbol})'] = df_fees_disp['Tutar_USD'] * fx_multiplier
+            df_fees_disp['Orijinal TL Kesintisi'] = df_fees_disp['Orijinal_TL'].apply(lambda x: f"₺{x:,.2f}" if x > 0 else "-")
+            st.dataframe(
+                df_fees_disp[['Tarih', 'Varlık', 'Kesinti Türü', f'Tutar ({curr_symbol})', 'Orijinal TL Kesintisi', 'Detay']],
+                use_container_width=True,
+                hide_index=True
+            )
+
+    # ================= SEKME 4: TEKNİK ANALİZ TERMİNALİ =================
+    with tab4:
         st.markdown("#### Canlı Piyasa & Teknik Analiz Terminali")
         
         yf_supported_tickers = ['GRID', 'GC=F', 'ASELS.IS', 'CCOLA.IS', 'CGCAM.IS', 'ALTIN.IS']
@@ -1154,9 +1359,9 @@ if results:
         with c_sel2:
             ta_period = st.selectbox("Periyot", options=["1mo", "3mo", "6mo", "1y", "2y"], index=3)
         with c_sel3:
-            ta_chart_type = st.radio("Grafik Tipi", options=["Mum (Candlestick)", "Çizgi (Line)"], horizontal=True)
+            ta_chart_type = st.radio("Grafik Tipi", options=["X-Tarzı Eğri (Spline)", "Mum (Candlestick)"], horizontal=True)
         with c_sel4:
-            show_sma = st.multiselect("Teknik İndikatörler", options=["SMA 20", "SMA 50", "İşlem Noktalarım"], default=["SMA 20", "İşlem Noktalarım"])
+            show_sma = st.multiselect("Teknik Katmanlar", options=["SMA 20", "SMA 50", "İşlem Noktalarım"], default=["SMA 20", "İşlem Noktalarım"])
 
         try:
             ta_df = yf.Ticker(selected_ta_ticker).history(period=ta_period)
@@ -1187,25 +1392,28 @@ if results:
                         decreasing_line_color='#FF3B69'
                     ))
                 else:
+                    is_up = ta_df['Close'].iloc[-1] >= ta_df['Close'].iloc[0]
+                    s_color = '#00E676' if is_up else '#FF3B69'
+                    s_fill = 'rgba(0, 230, 118, 0.12)' if is_up else 'rgba(255, 59, 105, 0.12)'
                     fig_ta.add_trace(go.Scatter(
                         x=ta_df.index,
                         y=ta_df['Close'],
                         mode='lines',
                         name=selected_ta_ticker,
-                        line=dict(color='#2962FF', width=2.5),
+                        line=dict(color=s_color, width=2.8, shape='spline', smoothing=0.8),
                         fill='tozeroy',
-                        fillcolor='rgba(41, 98, 255, 0.12)'
+                        fillcolor=s_fill
                     ))
 
                 if "SMA 20" in show_sma:
                     fig_ta.add_trace(go.Scatter(
                         x=ta_df.index, y=ta_df['SMA20'], mode='lines', 
-                        name='SMA 20', line=dict(color='#FFAB00', width=1.5)
+                        name='SMA 20', line=dict(color='#FFAB00', width=1.5, shape='spline')
                     ))
                 if "SMA 50" in show_sma:
                     fig_ta.add_trace(go.Scatter(
                         x=ta_df.index, y=ta_df['SMA50'], mode='lines', 
-                        name='SMA 50', line=dict(color='#00B0FF', width=1.5)
+                        name='SMA 50', line=dict(color='#00B0FF', width=1.5, shape='spline')
                     ))
 
                 if "İşlem Noktalarım" in show_sma and selected_ta_ticker in portfolio_transactions:
@@ -1234,26 +1442,16 @@ if results:
                             marker=dict(symbol='triangle-down', size=13, color='#FF3B69', line=dict(width=1, color='#000000'))
                         ))
 
-                fig_ta.update_layout(
-                    xaxis_rangeslider_visible=False,
-                    hovermode="x unified",
-                    height=520,
-                    yaxis_title=f"Fiyat ({unit_label})",
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                    margin=dict(l=0, r=0, t=30, b=0),
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    xaxis=dict(showspikes=True, spikemode='across', spikecolor='#848E9C', spikethickness=1, gridcolor='rgba(255,255,255,0.05)'),
-                    yaxis=dict(showspikes=True, spikemode='across', spikecolor='#848E9C', spikethickness=1, gridcolor='rgba(255,255,255,0.05)')
-                )
-                st.plotly_chart(fig_ta, use_container_width=True)
+                fig_ta.update_layout(xaxis_rangeslider_visible=False, height=500)
+                fig_ta = apply_x_smooth_layout(fig_ta, y_title=f"Fiyat ({unit_label})", show_range_buttons=False)
+                st.plotly_chart(fig_ta, use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.warning("Seçilen enstrüman için tarihsel grafik verisi bulunamadı.")
         except Exception as e:
             st.error(f"Teknik analiz grafiği yüklenirken hata: {str(e)}")
 
-   # ================= SEKME 4: OTOMATİK MUHASEBE MOTORU & KOD ÜRETİCİ =================
-    with tab4:
+    # ================= SEKME 5: OTOMATİK MUHASEBE MOTORU & KOD ÜRETİCİ =================
+    with tab5:
         st.markdown("#### Otomatik Maliyet Simülatörü & Yeni İşlem Kod Üretici")
         st.caption("Sol taraftan herhangi bir hisse/fon seçip işlem simülasyonu yapabilir, sağ tarafta otomatik oluşan kod satırını kopyalayıp canli.py dosyanıza yapıştırabilirsiniz.")
 
@@ -1296,7 +1494,6 @@ if results:
             default_fee = 1.50 if (active_ticker in US_STOCK_TICKERS and ("BUY" in sim_action or "SELL" in sim_action)) else 0.0
             sim_note = st.text_input("İşlem Notu (İsteğe Bağlı)", value="")
 
-            # --- SİMÜLASYON HESAPLAMALARI ---
             if "BUY" in sim_action:
                 c1, c2, c3 = st.columns(3)
                 sim_qty = c1.number_input("Alınan Adet / Pay", min_value=0.000001, value=1.0, step=0.1, format="%.6f")
@@ -1384,9 +1581,9 @@ if results:
                 "2. **İşlem Sonrası Kayıt:** İşlemi gerçekleştirdiğinizde sol taraftaki kutulara gerçekleşen adedi ve tutarı yazın.\n"
                 "3. **Tek Tıkla Kopyala:** Sağ üstteki kod kutusunun köşesindeki **Kopyala** ikonuna tıklayıp GitHub'daki `canli.py` dosyanıza yapıştırın. Maliyet düşümü ve kâr hesabını motor otomatik yapacaktır."
             )
-            
-    # ================= SEKME 5: İŞLEM GEÇMİŞİ LOGU (MOTOR ÇIKTISI) =================
-    with tab5:
+
+    # ================= SEKME 6: İŞLEM GEÇMİŞİ LOGU =================
+    with tab6:
         st.markdown("#### Muhasebe Motoru İşlem Defteri (Otomatik Maliyet & Kâr Dökümü)")
         
         filter_asset = st.selectbox(
