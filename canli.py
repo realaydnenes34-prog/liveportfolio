@@ -17,13 +17,10 @@ st.set_page_config(
 # --- PROFESYONEL BORSA TERMİNALİ CSS STİLİ ---
 st.markdown("""
 <style>
-    /* Genel Arka Plan ve Tipografi */
     .block-container {
         padding-top: 1.5rem;
         padding-bottom: 2rem;
     }
-    
-    /* Üst Piyasa Bandı (Ticker Tape) */
     .ticker-bar {
         display: flex;
         flex-wrap: wrap;
@@ -50,8 +47,6 @@ st.markdown("""
         color: #EAECEF;
         font-weight: 700;
     }
-
-    /* Özel KPI Metrik Kartları */
     .kpi-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -104,8 +99,6 @@ st.markdown("""
         color: #848E9C;
         background: rgba(132, 142, 156, 0.12);
     }
-
-    /* Sekme (Tab) Stilleri */
     .stTabs [data-baseweb="tab-list"] {
         gap: 24px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -119,10 +112,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Türkiye Saat Dilimi (UTC+3)
 tz_TR = timezone(timedelta(hours=3))
 
-# Kurumsal Varlık İsimlendirmeleri (Emojisiz)
+# Kurumsal Varlık İsimlendirmeleri
 ASSET_NAMES = {
     'GC=F': 'XAU/GRAM • Fiziki Altın (Gram)',
     'GRID': 'GRID • First Trust NASDAQ Clean Edge ETF',
@@ -142,177 +134,330 @@ ASSET_NAMES = {
     'USD_NEMA': 'NEMA • Midas Nemalandırma Gelirleri (USD & TL)'
 }
 
-# --- YATIRIM PORTFÖYÜ (TÜM İŞLEM GEÇMİŞİ - GÜN GÜN SIRALI 102 İŞLEM) ---
-portfolio_transactions = {
+NON_YF_TICKERS = {'IOG', 'YKT', 'IVY', 'YAS', 'TMG', 'AFA', 'HMG', 'HSL', 'PPS', 'USD_NEMA'}
+US_STOCK_TICKERS = {'GRID'}
+US_DEFAULT_FEE = 1.50  # ABD Borsası standart işlem ücreti ($1.50)
+
+# --- HAM İŞLEM VERİLERİ (OTOMATİK MUHASEBE MOTORU GİRDİSİ) ---
+# Not: Satışlarda (SELL) düşülen maliyet ve Realized_Profit artık elle yazılmaz;
+# motor Gross_Proceeds (Brüt Satış) ve Fee (Komisyon/Stopaj) üzerinden otomatik hesaplar!
+raw_portfolio_transactions = {
     # 1. İŞ PORTFÖY GÜMÜŞ SERBEST FON (15 Alış, 1 Satış = 16 İşlem)
     'IOG': [
-        {'Date': '2024-10-31', 'Quantity': 8.0, 'Total_Cost': 1.29, 'TRY_Amount': 44.33, 'Note': '8 pay x 5.5410 TL'},
-        {'Date': '2024-11-06', 'Quantity': 1.0, 'Total_Cost': 0.16, 'TRY_Amount': 5.37, 'Note': '1 pay x 5.3693 TL'},
-        {'Date': '2024-11-19', 'Quantity': 3.0, 'Total_Cost': 0.44, 'TRY_Amount': 15.22, 'Note': '3 pay x 5.0743 TL'},
-        {'Date': '2025-01-02', 'Quantity': 4.0, 'Total_Cost': 0.55, 'TRY_Amount': 19.34, 'Note': '4 pay x 4.8354 TL'},
-        {'Date': '2025-04-07', 'Quantity': 18.0, 'Total_Cost': 2.56, 'TRY_Amount': 97.41, 'Note': '18 pay x 5.4115 TL'},
-        {'Date': '2025-04-25', 'Quantity': 16.0, 'Total_Cost': 2.49, 'TRY_Amount': 95.63, 'Note': '16 pay x 5.9771 TL'},
-        {'Date': '2025-06-11', 'Quantity': 14.0, 'Total_Cost': 2.40, 'TRY_Amount': 94.37, 'Note': '14 pay x 6.7404 TL'},
-        {'Date': '2025-07-10', 'Quantity': 28.0, 'Total_Cost': 4.81, 'TRY_Amount': 192.35, 'Note': '28 pay x 6.8695 TL'},
-        {'Date': '2025-07-22', 'Quantity': 19.0, 'Total_Cost': 3.45, 'TRY_Amount': 139.36, 'Note': '19 pay x 7.3350 TL'},
-        {'Date': '2025-07-25', 'Quantity': 53.0, 'Total_Cost': 9.71, 'TRY_Amount': 393.25, 'Note': '53 pay x 7.4198 TL'},
-        {'Date': '2025-08-15', 'Quantity': 68.0, 'Total_Cost': 12.23, 'TRY_Amount': 499.66, 'Note': '68 pay x 7.3479 TL'},
-        {'Date': '2025-08-18', 'Quantity': 23.0, 'Total_Cost': 4.11, 'TRY_Amount': 168.19, 'Note': '23 pay x 7.3125 TL'},
-        {'Date': '2025-09-30', 'Quantity': 111.0, 'Total_Cost': 24.26, 'TRY_Amount': 1007.86, 'Note': '111 pay x 9.0798 TL'},
-        {'Date': '2025-10-06', 'Quantity': 114.0, 'Total_Cost': 25.31, 'TRY_Amount': 1054.73, 'Note': '114 pay x 9.2520 TL'},
-        {'Date': '2025-10-08', 'Quantity': 321.0, 'Total_Cost': 72.01, 'TRY_Amount': 3004.23, 'Note': '321 pay x 9.3590 TL'},
-        {'Date': '2026-01-07', 'Quantity': -801.0, 'Total_Cost': -165.78, 'Realized_Profit': 93.26, 'TRY_Amount': -11671.98, 'Note': 'Brüt Satış: 11.671,98 TL | Stopaj (06.01): -825,64 TL | Net Kâr: +4.015,04 TL'}
+        {'Date': '2024-10-31', 'Action': 'BUY', 'Quantity': 8.0, 'Gross_Amount': 1.29, 'Fee': 0.0, 'TRY_Amount': 44.33, 'Note': '8 pay x 5.5410 TL'},
+        {'Date': '2024-11-06', 'Action': 'BUY', 'Quantity': 1.0, 'Gross_Amount': 0.16, 'Fee': 0.0, 'TRY_Amount': 5.37, 'Note': '1 pay x 5.3693 TL'},
+        {'Date': '2024-11-19', 'Action': 'BUY', 'Quantity': 3.0, 'Gross_Amount': 0.44, 'Fee': 0.0, 'TRY_Amount': 15.22, 'Note': '3 pay x 5.0743 TL'},
+        {'Date': '2025-01-02', 'Action': 'BUY', 'Quantity': 4.0, 'Gross_Amount': 0.55, 'Fee': 0.0, 'TRY_Amount': 19.34, 'Note': '4 pay x 4.8354 TL'},
+        {'Date': '2025-04-07', 'Action': 'BUY', 'Quantity': 18.0, 'Gross_Amount': 2.56, 'Fee': 0.0, 'TRY_Amount': 97.41, 'Note': '18 pay x 5.4115 TL'},
+        {'Date': '2025-04-25', 'Action': 'BUY', 'Quantity': 16.0, 'Gross_Amount': 2.49, 'Fee': 0.0, 'TRY_Amount': 95.63, 'Note': '16 pay x 5.9771 TL'},
+        {'Date': '2025-06-11', 'Action': 'BUY', 'Quantity': 14.0, 'Gross_Amount': 2.40, 'Fee': 0.0, 'TRY_Amount': 94.37, 'Note': '14 pay x 6.7404 TL'},
+        {'Date': '2025-07-10', 'Action': 'BUY', 'Quantity': 28.0, 'Gross_Amount': 4.81, 'Fee': 0.0, 'TRY_Amount': 192.35, 'Note': '28 pay x 6.8695 TL'},
+        {'Date': '2025-07-22', 'Action': 'BUY', 'Quantity': 19.0, 'Gross_Amount': 3.45, 'Fee': 0.0, 'TRY_Amount': 139.36, 'Note': '19 pay x 7.3350 TL'},
+        {'Date': '2025-07-25', 'Action': 'BUY', 'Quantity': 53.0, 'Gross_Amount': 9.71, 'Fee': 0.0, 'TRY_Amount': 393.25, 'Note': '53 pay x 7.4198 TL'},
+        {'Date': '2025-08-15', 'Action': 'BUY', 'Quantity': 68.0, 'Gross_Amount': 12.23, 'Fee': 0.0, 'TRY_Amount': 499.66, 'Note': '68 pay x 7.3479 TL'},
+        {'Date': '2025-08-18', 'Action': 'BUY', 'Quantity': 23.0, 'Gross_Amount': 4.11, 'Fee': 0.0, 'TRY_Amount': 168.19, 'Note': '23 pay x 7.3125 TL'},
+        {'Date': '2025-09-30', 'Action': 'BUY', 'Quantity': 111.0, 'Gross_Amount': 24.26, 'Fee': 0.0, 'TRY_Amount': 1007.86, 'Note': '111 pay x 9.0798 TL'},
+        {'Date': '2025-10-06', 'Action': 'BUY', 'Quantity': 114.0, 'Gross_Amount': 25.31, 'Fee': 0.0, 'TRY_Amount': 1054.73, 'Note': '114 pay x 9.2520 TL'},
+        {'Date': '2025-10-08', 'Action': 'BUY', 'Quantity': 321.0, 'Gross_Amount': 72.01, 'Fee': 0.0, 'TRY_Amount': 3004.23, 'Note': '321 pay x 9.3590 TL'},
+        {'Date': '2026-01-07', 'Action': 'SELL', 'Quantity': 801.0, 'Gross_Proceeds': 278.22, 'Fee': 19.18, 'TRY_Amount': 11671.98, 'Note': 'Brüt: 11.671,98 TL | Stopaj: -825,64 TL'}
     ],
 
-    # 2. YAPI KREDİ PORTFÖY ALTIN FONU (4 Alış, 1 Satış = 5 İşlem)
+    # 2. YAPI KREDİ PORTFÖY ALTIN FONU
     'YKT': [
-        {'Date': '2024-10-31', 'Quantity': 114.0, 'Total_Cost': 1.46, 'TRY_Amount': 49.97, 'Note': '114 pay x 0.4383 TL'},
-        {'Date': '2024-11-05', 'Quantity': 69.0, 'Total_Cost': 0.87, 'TRY_Amount': 29.85, 'Note': '69 pay x 0.4325 TL'},
-        {'Date': '2024-11-19', 'Quantity': 46.0, 'Total_Cost': 0.57, 'TRY_Amount': 19.62, 'Note': '46 pay x 0.4266 TL'},
-        {'Date': '2025-04-07', 'Quantity': 191.0, 'Total_Cost': 2.62, 'TRY_Amount': 99.69, 'Note': '191 pay x 0.5219 TL'},
-        {'Date': '2025-04-15', 'Quantity': -420.0, 'Total_Cost': -5.52, 'Realized_Profit': 0.66, 'TRY_Amount': -226.86, 'Note': 'Brüt Satış: 226,86 TL | Stopaj (14.04): -2,52 TL | Net Kâr: +25,21 TL'}
+        {'Date': '2024-10-31', 'Action': 'BUY', 'Quantity': 114.0, 'Gross_Amount': 1.46, 'Fee': 0.0, 'TRY_Amount': 49.97, 'Note': '114 pay x 0.4383 TL'},
+        {'Date': '2024-11-05', 'Action': 'BUY', 'Quantity': 69.0, 'Gross_Amount': 0.87, 'Fee': 0.0, 'TRY_Amount': 29.85, 'Note': '69 pay x 0.4325 TL'},
+        {'Date': '2024-11-19', 'Action': 'BUY', 'Quantity': 46.0, 'Gross_Amount': 0.57, 'Fee': 0.0, 'TRY_Amount': 19.62, 'Note': '46 pay x 0.4266 TL'},
+        {'Date': '2025-04-07', 'Action': 'BUY', 'Quantity': 191.0, 'Gross_Amount': 2.62, 'Fee': 0.0, 'TRY_Amount': 99.69, 'Note': '191 pay x 0.5219 TL'},
+        {'Date': '2025-04-15', 'Action': 'SELL', 'Quantity': 420.0, 'Gross_Proceeds': 6.25, 'Fee': 0.07, 'TRY_Amount': 226.86, 'Note': 'Brüt: 226,86 TL | Stopaj: -2,52 TL'}
     ],
 
-    # 3. İSTANBUL PORTFÖY BLOCKCHAIN FONU (2 Alış, 1 Satış = 3 İşlem)
+    # 3. İSTANBUL PORTFÖY BLOCKCHAIN FONU
     'IVY': [
-        {'Date': '2024-11-04', 'Quantity': 17.0, 'Total_Cost': 1.43, 'TRY_Amount': 49.22, 'Note': '17 pay x 2.8954 TL'},
-        {'Date': '2024-11-19', 'Quantity': 9.0, 'Total_Cost': 0.85, 'TRY_Amount': 29.49, 'Note': '9 pay x 3.2769 TL'},
-        {'Date': '2025-05-02', 'Quantity': -26.0, 'Total_Cost': -2.28, 'Realized_Profit': 0.14, 'TRY_Amount': -84.85, 'Note': 'Brüt Satış: 84,85 TL | Stopaj (01.05): -0,62 TL | Net Kâr: +5,51 TL'}
+        {'Date': '2024-11-04', 'Action': 'BUY', 'Quantity': 17.0, 'Gross_Amount': 1.43, 'Fee': 0.0, 'TRY_Amount': 49.22, 'Note': '17 pay x 2.8954 TL'},
+        {'Date': '2024-11-19', 'Action': 'BUY', 'Quantity': 9.0, 'Gross_Amount': 0.85, 'Fee': 0.0, 'TRY_Amount': 29.49, 'Note': '9 pay x 3.2769 TL'},
+        {'Date': '2025-05-02', 'Action': 'SELL', 'Quantity': 26.0, 'Gross_Proceeds': 2.44, 'Fee': 0.02, 'TRY_Amount': 84.85, 'Note': 'Brüt: 84,85 TL | Stopaj: -0,62 TL'}
     ],
 
-    # 4. YAPI KREDİ KOÇ HOLDİNG İŞTİRAK FONU (2 Alış, 1 Satış = 3 İşlem)
+    # 4. YAPI KREDİ KOÇ HOLDİNG İŞTİRAK FONU
     'YAS': [
-        {'Date': '2024-11-04', 'Quantity': 6.0, 'Total_Cost': 1.96, 'TRY_Amount': 67.41, 'Note': '6 pay x 11.2342 TL'},
-        {'Date': '2024-11-19', 'Quantity': 2.0, 'Total_Cost': 0.71, 'TRY_Amount': 24.44, 'Note': '2 pay x 12.2191 TL'},
-        {'Date': '2025-03-28', 'Quantity': -8.0, 'Total_Cost': -2.67, 'Realized_Profit': 0.10, 'TRY_Amount': -95.66, 'Note': 'Satış: 95,66 TL (%0 Stopaj) | Net Kâr: +3,81 TL'}
+        {'Date': '2024-11-04', 'Action': 'BUY', 'Quantity': 6.0, 'Gross_Amount': 1.96, 'Fee': 0.0, 'TRY_Amount': 67.41, 'Note': '6 pay x 11.2342 TL'},
+        {'Date': '2024-11-19', 'Action': 'BUY', 'Quantity': 2.0, 'Gross_Amount': 0.71, 'Fee': 0.0, 'TRY_Amount': 24.44, 'Note': '2 pay x 12.2191 TL'},
+        {'Date': '2025-03-28', 'Action': 'SELL', 'Quantity': 8.0, 'Gross_Proceeds': 2.77, 'Fee': 0.0, 'TRY_Amount': 95.66, 'Note': 'Satış: 95,66 TL (%0 Stopaj)'}
     ],
 
-    # 5. İŞ PORTFÖY YABANCI HİSSE SENEDİ FONU (2 Alış, 1 Satış = 3 İşlem)
+    # 5. İŞ PORTFÖY YABANCI HİSSE SENEDİ FONU
     'TMG': [
-        {'Date': '2024-12-06', 'Quantity': 18.0, 'Total_Cost': 0.42, 'TRY_Amount': 14.52, 'Note': '18 pay x 0.8065 TL'},
-        {'Date': '2024-12-09', 'Quantity': 61.0, 'Total_Cost': 1.42, 'TRY_Amount': 49.22, 'Note': '61 pay x 0.8070 TL'},
-        {'Date': '2025-01-30', 'Quantity': -79.0, 'Total_Cost': -1.84, 'Realized_Profit': -0.04, 'TRY_Amount': -62.46, 'Note': 'Satış: 62,46 TL | Net Zarar: -1,28 TL'}
+        {'Date': '2024-12-06', 'Action': 'BUY', 'Quantity': 18.0, 'Gross_Amount': 0.42, 'Fee': 0.0, 'TRY_Amount': 14.52, 'Note': '18 pay x 0.8065 TL'},
+        {'Date': '2024-12-09', 'Action': 'BUY', 'Quantity': 61.0, 'Gross_Amount': 1.42, 'Fee': 0.0, 'TRY_Amount': 49.22, 'Note': '61 pay x 0.8070 TL'},
+        {'Date': '2025-01-30', 'Action': 'SELL', 'Quantity': 79.0, 'Gross_Proceeds': 1.80, 'Fee': 0.0, 'TRY_Amount': 62.46, 'Note': 'Satış: 62,46 TL'}
     ],
 
-    # 6. ÇAĞDAŞ CAM SAN. VE TİC. A.Ş. (1 Halka Arz, 3 Satış = 4 İşlem)
+    # 6. ÇAĞDAŞ CAM SAN. VE TİC. A.Ş. (Parçalı Satış: %50 -> %25 -> %25)
     'CGCAM.IS': [
-        {'Date': '2024-12-12', 'Quantity': 4.0, 'Total_Cost': 2.29, 'TRY_Amount': 80.04, 'Note': 'Halka Arz: 4 adet x 20,00 TL (+0,03 TL Komisyon)'},
-        {'Date': '2024-12-19', 'Quantity': -2.0, 'Total_Cost': -1.15, 'Realized_Profit': 0.36, 'TRY_Amount': -52.70, 'Note': '2 adet x 26,62 TL | Anında Nakit Kom: -0,51 TL | Net: 52,70 TL'},
-        {'Date': '2024-12-30', 'Quantity': -1.0, 'Total_Cost': -0.57, 'Realized_Profit': 0.43, 'TRY_Amount': -35.05, 'Note': '1 adet x 35,24 TL | Anında Nakit Kom (31.12): -0,17 TL | Net: 35,05 TL'},
-        {'Date': '2025-03-03', 'Quantity': -1.0, 'Total_Cost': -0.57, 'Realized_Profit': 0.17, 'TRY_Amount': -26.30, 'Note': '1 adet x 26,30 TL | Komisyonsuz Satış'}
+        {'Date': '2024-12-12', 'Action': 'BUY', 'Quantity': 4.0, 'Gross_Amount': 2.29, 'Fee': 0.0, 'TRY_Amount': 80.04, 'Note': 'Halka Arz: 4 adet x 20,00 TL'},
+        {'Date': '2024-12-19', 'Action': 'SELL', 'Quantity': 2.0, 'Gross_Proceeds': 1.52, 'Fee': 0.01, 'TRY_Amount': 52.70, 'Note': '2 adet Satış | Anında Nakit Kom: -0,51 TL'},
+        {'Date': '2024-12-30', 'Action': 'SELL', 'Quantity': 1.0, 'Gross_Proceeds': 1.00, 'Fee': 0.00, 'TRY_Amount': 35.05, 'Note': '1 adet Satış | Anında Nakit Kom: -0,17 TL'},
+        {'Date': '2025-03-03', 'Action': 'SELL', 'Quantity': 1.0, 'Gross_Proceeds': 0.74, 'Fee': 0.00, 'TRY_Amount': 26.30, 'Note': '1 adet Satış (Komisyonsuz)'}
     ],
 
-    # 7. AK PORTFÖY AMERİKA YABANCI HİSSE SENEDİ FONU (13 Alış, 2 Satış = 15 İşlem)
+    # 7. AK PORTFÖY AMERİKA YABANCI HİSSE SENEDİ FONU (Parçalı Satış: %50 -> %50)
     'AFA': [
-        {'Date': '2024-12-13', 'Quantity': 27.0, 'Total_Cost': 0.56, 'TRY_Amount': 19.39, 'Note': '27 pay x 0.7182 TL'},
-        {'Date': '2024-12-20', 'Quantity': 70.0, 'Total_Cost': 1.41, 'TRY_Amount': 49.68, 'Note': '70 pay x 0.7096 TL'},
-        {'Date': '2025-01-02', 'Quantity': 27.0, 'Total_Cost': 0.55, 'TRY_Amount': 19.29, 'Note': '27 pay x 0.7145 TL'},
-        {'Date': '2025-02-04', 'Quantity': 82.0, 'Total_Cost': 1.66, 'TRY_Amount': 59.72, 'Note': '82 pay x 0.7283 TL'},
-        {'Date': '2025-04-03', 'Quantity': 178.0, 'Total_Cost': 3.32, 'TRY_Amount': 125.94, 'Note': '178 pay x 0.7075 TL'},
-        {'Date': '2025-04-07', 'Quantity': 309.0, 'Total_Cost': 5.26, 'TRY_Amount': 200.00, 'Note': '309 pay x 0.6472 TL'},
-        {'Date': '2025-04-17', 'Quantity': 147.0, 'Total_Cost': 2.60, 'TRY_Amount': 99.42, 'Note': '147 pay x 0.6763 TL'},
-        {'Date': '2025-04-25', 'Quantity': 158.0, 'Total_Cost': 2.85, 'TRY_Amount': 109.68, 'Note': '158 pay x 0.6941 TL'},
-        {'Date': '2025-05-20', 'Quantity': 151.0, 'Total_Cost': 3.06, 'TRY_Amount': 118.95, 'Note': '151 pay x 0.7878 TL'},
-        {'Date': '2025-06-11', 'Quantity': 225.0, 'Total_Cost': 4.59, 'TRY_Amount': 180.28, 'Note': '225 pay x 0.8012 TL'},
-        {'Date': '2025-07-25', 'Quantity': 455.0, 'Total_Cost': 9.87, 'TRY_Amount': 399.40, 'Note': '455 pay x 0.8778 TL'},
-        {'Date': '2025-08-18', 'Quantity': 111.0, 'Total_Cost': 2.44, 'TRY_Amount': 99.83, 'Note': '111 pay x 0.8993 TL'},
-        {'Date': '2025-08-27', 'Quantity': 334.0, 'Total_Cost': 7.32, 'TRY_Amount': 300.34, 'Note': '334 pay x 0.8992 TL'},
-        {'Date': '2025-09-25', 'Quantity': -1137.0, 'Total_Cost': -22.75, 'Realized_Profit': 2.94, 'TRY_Amount': -1049.92, 'Note': '1. Satış: 1.049,92 TL | Stopaj (24.09): -37,28 TL | Net Kâr: +121,68 TL'},
-        {'Date': '2025-10-02', 'Quantity': -1137.0, 'Total_Cost': -22.74, 'Realized_Profit': 3.94, 'TRY_Amount': -1067.73, 'Note': '2. Satış: 1.067,73 TL | Stopaj (01.10): -12,90 TL | Net Kâr: +163,87 TL'}
+        {'Date': '2024-12-13', 'Action': 'BUY', 'Quantity': 27.0, 'Gross_Amount': 0.56, 'Fee': 0.0, 'TRY_Amount': 19.39, 'Note': '27 pay x 0.7182 TL'},
+        {'Date': '2024-12-20', 'Action': 'BUY', 'Quantity': 70.0, 'Gross_Amount': 1.41, 'Fee': 0.0, 'TRY_Amount': 49.68, 'Note': '70 pay x 0.7096 TL'},
+        {'Date': '2025-01-02', 'Action': 'BUY', 'Quantity': 27.0, 'Gross_Amount': 0.55, 'Fee': 0.0, 'TRY_Amount': 19.29, 'Note': '27 pay x 0.7145 TL'},
+        {'Date': '2025-02-04', 'Action': 'BUY', 'Quantity': 82.0, 'Gross_Amount': 1.66, 'Fee': 0.0, 'TRY_Amount': 59.72, 'Note': '82 pay x 0.7283 TL'},
+        {'Date': '2025-04-03', 'Action': 'BUY', 'Quantity': 178.0, 'Gross_Amount': 3.32, 'Fee': 0.0, 'TRY_Amount': 125.94, 'Note': '178 pay x 0.7075 TL'},
+        {'Date': '2025-04-07', 'Action': 'BUY', 'Quantity': 309.0, 'Gross_Amount': 5.26, 'Fee': 0.0, 'TRY_Amount': 200.00, 'Note': '309 pay x 0.6472 TL'},
+        {'Date': '2025-04-17', 'Action': 'BUY', 'Quantity': 147.0, 'Gross_Amount': 2.60, 'Fee': 0.0, 'TRY_Amount': 99.42, 'Note': '147 pay x 0.6763 TL'},
+        {'Date': '2025-04-25', 'Action': 'BUY', 'Quantity': 158.0, 'Gross_Amount': 2.85, 'Fee': 0.0, 'TRY_Amount': 109.68, 'Note': '158 pay x 0.6941 TL'},
+        {'Date': '2025-05-20', 'Action': 'BUY', 'Quantity': 151.0, 'Gross_Amount': 3.06, 'Fee': 0.0, 'TRY_Amount': 118.95, 'Note': '151 pay x 0.7878 TL'},
+        {'Date': '2025-06-11', 'Action': 'BUY', 'Quantity': 225.0, 'Gross_Amount': 4.59, 'Fee': 0.0, 'TRY_Amount': 180.28, 'Note': '225 pay x 0.8012 TL'},
+        {'Date': '2025-07-25', 'Action': 'BUY', 'Quantity': 455.0, 'Gross_Amount': 9.87, 'Fee': 0.0, 'TRY_Amount': 399.40, 'Note': '455 pay x 0.8778 TL'},
+        {'Date': '2025-08-18', 'Action': 'BUY', 'Quantity': 111.0, 'Gross_Amount': 2.44, 'Fee': 0.0, 'TRY_Amount': 99.83, 'Note': '111 pay x 0.8993 TL'},
+        {'Date': '2025-08-27', 'Action': 'BUY', 'Quantity': 334.0, 'Gross_Amount': 7.32, 'Fee': 0.0, 'TRY_Amount': 300.34, 'Note': '334 pay x 0.8992 TL'},
+        {'Date': '2025-09-25', 'Action': 'SELL', 'Quantity': 1137.0, 'Gross_Proceeds': 26.59, 'Fee': 0.90, 'TRY_Amount': 1049.92, 'Note': '1. Satış (%50): 1.049,92 TL | Stopaj: -37,28 TL'},
+        {'Date': '2025-10-02', 'Action': 'SELL', 'Quantity': 1137.0, 'Gross_Proceeds': 26.99, 'Fee': 0.31, 'TRY_Amount': 1067.73, 'Note': '2. Satış (Kalan %50): 1.067,73 TL | Stopaj: -12,90 TL'}
     ],
 
-    # 8. HSBC MUTLAK GETİRİ HİSSE SENEDİ SERBEST FON (5 Alış, 2 Satış = 7 İşlem)
+    # 8. HSBC MUTLAK GETİRİ HİSSE SENEDİ SERBEST FON (Parçalı Satış: %32.71 -> %67.29)
     'HMG': [
-        {'Date': '2025-01-10', 'Quantity': 6914.0, 'Total_Cost': 8.46, 'TRY_Amount': 299.96, 'Note': '6.914 pay x 0.0434 TL'},
-        {'Date': '2025-02-10', 'Quantity': 6487.0, 'Total_Cost': 8.33, 'TRY_Amount': 299.98, 'Note': '6.487 pay x 0.0462 TL'},
-        {'Date': '2025-04-17', 'Quantity': 3062.0, 'Total_Cost': 3.93, 'TRY_Amount': 149.96, 'Note': '3.062 pay x 0.0490 TL'},
-        {'Date': '2025-04-24', 'Quantity': 4037.0, 'Total_Cost': 5.21, 'TRY_Amount': 200.00, 'Note': '4.037 pay x 0.0495 TL'},
-        {'Date': '2025-04-25', 'Quantity': 10073.0, 'Total_Cost': 13.01, 'TRY_Amount': 499.96, 'Note': '10.073 pay x 0.0496 TL'},
-        {'Date': '2025-06-24', 'Quantity': -10000.0, 'Total_Cost': -12.74, 'Realized_Profit': 0.78, 'TRY_Amount': -505.13, 'Note': '1. Satış: 10.000 pay = 505,13 TL (%0 Stopaj)'},
-        {'Date': '2025-07-07', 'Quantity': -20573.0, 'Total_Cost': -26.20, 'Realized_Profit': 1.90, 'TRY_Amount': -1051.49, 'Note': '2. Satış: 20.573 pay = 1.051,49 TL (%0 Stopaj)'}
+        {'Date': '2025-01-10', 'Action': 'BUY', 'Quantity': 6914.0, 'Gross_Amount': 8.46, 'Fee': 0.0, 'TRY_Amount': 299.96, 'Note': '6.914 pay x 0.0434 TL'},
+        {'Date': '2025-02-10', 'Action': 'BUY', 'Quantity': 6487.0, 'Gross_Amount': 8.33, 'Fee': 0.0, 'TRY_Amount': 299.98, 'Note': '6.487 pay x 0.0462 TL'},
+        {'Date': '2025-04-17', 'Action': 'BUY', 'Quantity': 3062.0, 'Gross_Amount': 3.93, 'Fee': 0.0, 'TRY_Amount': 149.96, 'Note': '3.062 pay x 0.0490 TL'},
+        {'Date': '2025-04-24', 'Action': 'BUY', 'Quantity': 4037.0, 'Gross_Amount': 5.21, 'Fee': 0.0, 'TRY_Amount': 200.00, 'Note': '4.037 pay x 0.0495 TL'},
+        {'Date': '2025-04-25', 'Action': 'BUY', 'Quantity': 10073.0, 'Gross_Amount': 13.01, 'Fee': 0.0, 'TRY_Amount': 499.96, 'Note': '10.073 pay x 0.0496 TL'},
+        {'Date': '2025-06-24', 'Action': 'SELL', 'Quantity': 10000.0, 'Gross_Proceeds': 13.52, 'Fee': 0.0, 'TRY_Amount': 505.13, 'Note': '1. Kısmi Satış (10.000 pay = %32.71)'},
+        {'Date': '2025-07-07', 'Action': 'SELL', 'Quantity': 20573.0, 'Gross_Proceeds': 28.10, 'Fee': 0.0, 'TRY_Amount': 1051.49, 'Note': '2. Satış (Kalan 20.573 pay)'}
     ],
 
-    # 9. HSBC PORTFÖY PARA PİYASASI FONU (8 Alış, 1 Satış = 9 İşlem)
+    # 9. HSBC PORTFÖY PARA PİYASASI FONU
     'HSL': [
-        {'Date': '2025-04-18', 'Quantity': 8.0, 'Total_Cost': 50.43, 'TRY_Amount': 1926.43, 'Note': '8 pay x 240.8033 TL'},
-        {'Date': '2025-04-22', 'Quantity': 8.0, 'Total_Cost': 50.62, 'TRY_Amount': 1937.59, 'Note': '8 pay x 242.1987 TL'},
-        {'Date': '2025-04-24', 'Quantity': 26.0, 'Total_Cost': 164.49, 'TRY_Amount': 6313.22, 'Note': '26 pay x 242.8162 TL'},
-        {'Date': '2025-05-08', 'Quantity': 12.0, 'Total_Cost': 76.75, 'TRY_Amount': 2966.56, 'Note': '12 pay x 247.2131 TL'},
-        {'Date': '2025-05-14', 'Quantity': 11.0, 'Total_Cost': 70.72, 'TRY_Amount': 2740.30, 'Note': '11 pay x 249.1178 TL'},
-        {'Date': '2025-06-10', 'Quantity': 5.0, 'Total_Cost': 32.89, 'TRY_Amount': 1289.94, 'Note': '5 pay x 257.9887 TL'},
-        {'Date': '2025-07-21', 'Quantity': 1.0, 'Total_Cost': 6.74, 'TRY_Amount': 271.71, 'Note': '1 pay x 271.7117 TL'},
-        {'Date': '2025-08-14', 'Quantity': 2.0, 'Total_Cost': 13.69, 'TRY_Amount': 558.63, 'Note': '2 pay x 279.3153 TL'},
-        {'Date': '2025-09-17', 'Quantity': -73.0, 'Total_Cost': -466.33, 'Realized_Profit': 65.53, 'TRY_Amount': -21188.02, 'Note': 'Brüt Satış: 21.188,02 TL | Stopaj (16.09): -478,55 TL | Net Kâr: +2.705,10 TL'}
+        {'Date': '2025-04-18', 'Action': 'BUY', 'Quantity': 8.0, 'Gross_Amount': 50.43, 'Fee': 0.0, 'TRY_Amount': 1926.43, 'Note': '8 pay x 240.8033 TL'},
+        {'Date': '2025-04-22', 'Action': 'BUY', 'Quantity': 8.0, 'Gross_Amount': 50.62, 'Fee': 0.0, 'TRY_Amount': 1937.59, 'Note': '8 pay x 242.1987 TL'},
+        {'Date': '2025-04-24', 'Action': 'BUY', 'Quantity': 26.0, 'Gross_Amount': 164.49, 'Fee': 0.0, 'TRY_Amount': 6313.22, 'Note': '26 pay x 242.8162 TL'},
+        {'Date': '2025-05-08', 'Action': 'BUY', 'Quantity': 12.0, 'Gross_Amount': 76.75, 'Fee': 0.0, 'TRY_Amount': 2966.56, 'Note': '12 pay x 247.2131 TL'},
+        {'Date': '2025-05-14', 'Action': 'BUY', 'Quantity': 11.0, 'Gross_Amount': 70.72, 'Fee': 0.0, 'TRY_Amount': 2740.30, 'Note': '11 pay x 249.1178 TL'},
+        {'Date': '2025-06-10', 'Action': 'BUY', 'Quantity': 5.0, 'Gross_Amount': 32.89, 'Fee': 0.0, 'TRY_Amount': 1289.94, 'Note': '5 pay x 257.9887 TL'},
+        {'Date': '2025-07-21', 'Action': 'BUY', 'Quantity': 1.0, 'Gross_Amount': 6.74, 'Fee': 0.0, 'TRY_Amount': 271.71, 'Note': '1 pay x 271.7117 TL'},
+        {'Date': '2025-08-14', 'Action': 'BUY', 'Quantity': 2.0, 'Gross_Amount': 13.69, 'Fee': 0.0, 'TRY_Amount': 558.63, 'Note': '2 pay x 279.3153 TL'},
+        {'Date': '2025-09-17', 'Action': 'SELL', 'Quantity': 73.0, 'Gross_Proceeds': 543.45, 'Fee': 11.59, 'TRY_Amount': 21188.02, 'Note': 'Brüt: 21.188,02 TL | Stopaj: -478,55 TL'}
     ],
 
-    # 10. DARPHANE ALTIN SERTİFİKASI • 0,01 GR ALTIN (11 Alış, 1 Satış = 12 İşlem)
+    # 10. DARPHANE ALTIN SERTİFİKASI • 0,01 GR ALTIN
     'ALTIN.IS': [
-        {'Date': '2025-04-24', 'Quantity': 3.0, 'Total_Cost': 3.72, 'TRY_Amount': 142.95, 'Note': '3 adet x 47,65 TL'},
-        {'Date': '2025-04-25', 'Quantity': 1.0, 'Total_Cost': 1.19, 'TRY_Amount': 45.82, 'Note': '1 adet x 45,82 TL'},
-        {'Date': '2025-05-02', 'Quantity': 1.0, 'Total_Cost': 1.17, 'TRY_Amount': 44.92, 'Note': '1 adet x 44,92 TL'},
-        {'Date': '2025-05-08', 'Quantity': 1.0, 'Total_Cost': 1.22, 'TRY_Amount': 47.08, 'Note': '1 adet x 47,08 TL'},
-        {'Date': '2025-05-14', 'Quantity': 1.0, 'Total_Cost': 1.14, 'TRY_Amount': 44.14, 'Note': '1 adet x 44,14 TL'},
-        {'Date': '2025-05-15', 'Quantity': 3.0, 'Total_Cost': 3.32, 'TRY_Amount': 128.61, 'Note': '3 adet x 42,87 TL'},
-        {'Date': '2025-06-10', 'Quantity': 1.0, 'Total_Cost': 1.20, 'TRY_Amount': 47.07, 'Note': '1 adet x 47,07 TL'},
-        {'Date': '2025-06-24', 'Quantity': 1.0, 'Total_Cost': 1.20, 'TRY_Amount': 47.76, 'Note': '1 adet x 47,76 TL'},
-        {'Date': '2025-07-07', 'Quantity': 5.0, 'Total_Cost': 5.84, 'TRY_Amount': 232.60, 'Note': '5 adet x 46,52 TL'},
-        {'Date': '2025-07-09', 'Quantity': 2.0, 'Total_Cost': 2.31, 'TRY_Amount': 92.32, 'Note': '2 adet x 46,16 TL (Limit)'},
-        {'Date': '2025-08-14', 'Quantity': 6.0, 'Total_Cost': 7.00, 'TRY_Amount': 285.90, 'Note': '6 adet x 47,65 TL (Limit)'},
-        {'Date': '2025-09-18', 'Quantity': -25.0, 'Total_Cost': -29.31, 'Realized_Profit': 6.56, 'TRY_Amount': -1430.00, 'Note': 'Brüt: 1.448,25 TL | Anında Nakit Kom: -18,25 TL | Net: 1.430,00 TL (+270,83 TL Kâr)'}
+        {'Date': '2025-04-24', 'Action': 'BUY', 'Quantity': 3.0, 'Gross_Amount': 3.72, 'Fee': 0.0, 'TRY_Amount': 142.95, 'Note': '3 adet x 47,65 TL'},
+        {'Date': '2025-04-25', 'Action': 'BUY', 'Quantity': 1.0, 'Gross_Amount': 1.19, 'Fee': 0.0, 'TRY_Amount': 45.82, 'Note': '1 adet x 45,82 TL'},
+        {'Date': '2025-05-02', 'Action': 'BUY', 'Quantity': 1.0, 'Gross_Amount': 1.17, 'Fee': 0.0, 'TRY_Amount': 44.92, 'Note': '1 adet x 44,92 TL'},
+        {'Date': '2025-05-08', 'Action': 'BUY', 'Quantity': 1.0, 'Gross_Amount': 1.22, 'Fee': 0.0, 'TRY_Amount': 47.08, 'Note': '1 adet x 47,08 TL'},
+        {'Date': '2025-05-14', 'Action': 'BUY', 'Quantity': 1.0, 'Gross_Amount': 1.14, 'Fee': 0.0, 'TRY_Amount': 44.14, 'Note': '1 adet x 44,14 TL'},
+        {'Date': '2025-05-15', 'Action': 'BUY', 'Quantity': 3.0, 'Gross_Amount': 3.32, 'Fee': 0.0, 'TRY_Amount': 128.61, 'Note': '3 adet x 42,87 TL'},
+        {'Date': '2025-06-10', 'Action': 'BUY', 'Quantity': 1.0, 'Gross_Amount': 1.20, 'Fee': 0.0, 'TRY_Amount': 47.07, 'Note': '1 adet x 47,07 TL'},
+        {'Date': '2025-06-24', 'Action': 'BUY', 'Quantity': 1.0, 'Gross_Amount': 1.20, 'Fee': 0.0, 'TRY_Amount': 47.76, 'Note': '1 adet x 47,76 TL'},
+        {'Date': '2025-07-07', 'Action': 'BUY', 'Quantity': 5.0, 'Gross_Amount': 5.84, 'Fee': 0.0, 'TRY_Amount': 232.60, 'Note': '5 adet x 46,52 TL'},
+        {'Date': '2025-07-09', 'Action': 'BUY', 'Quantity': 2.0, 'Gross_Amount': 2.31, 'Fee': 0.0, 'TRY_Amount': 92.32, 'Note': '2 adet x 46,16 TL (Limit)'},
+        {'Date': '2025-08-14', 'Action': 'BUY', 'Quantity': 6.0, 'Gross_Amount': 7.00, 'Fee': 0.0, 'TRY_Amount': 285.90, 'Note': '6 adet x 47,65 TL (Limit)'},
+        {'Date': '2025-09-18', 'Action': 'SELL', 'Quantity': 25.0, 'Gross_Proceeds': 36.31, 'Fee': 0.44, 'TRY_Amount': 1430.00, 'Note': 'Brüt: 1.448,25 TL | Anında Nakit Kom: -18,25 TL'}
     ],
 
-    # 11. COCA-COLA İÇECEK A.Ş. (4 Alış, 1 Satış = 5 İşlem)
+    # 11. COCA-COLA İÇECEK A.Ş.
     'CCOLA.IS': [
-        {'Date': '2025-06-24', 'Quantity': 10.0, 'Total_Cost': 12.21, 'TRY_Amount': 484.00, 'Note': '10 pay x 48,40 TL'},
-        {'Date': '2025-07-07', 'Quantity': 15.0, 'Total_Cost': 19.48, 'TRY_Amount': 776.25, 'Note': '15 pay x 51,75 TL'},
-        {'Date': '2025-07-09', 'Quantity': 2.0, 'Total_Cost': 2.50, 'TRY_Amount': 99.64, 'Note': '2 pay x 49,82 TL (Limit)'},
-        {'Date': '2025-08-14', 'Quantity': 12.0, 'Total_Cost': 14.73, 'TRY_Amount': 601.20, 'Note': '12 pay x 50,10 TL (Limit)'},
-        {'Date': '2026-01-14', 'Quantity': -39.0, 'Total_Cost': -48.92, 'Realized_Profit': 13.65, 'TRY_Amount': -2550.60, 'Note': 'Satış: 39 pay x 65,40 TL = 2.550,60 TL | Net Kâr: +589,51 TL'}
+        {'Date': '2025-06-24', 'Action': 'BUY', 'Quantity': 10.0, 'Gross_Amount': 12.21, 'Fee': 0.0, 'TRY_Amount': 484.00, 'Note': '10 pay x 48,40 TL'},
+        {'Date': '2025-07-07', 'Action': 'BUY', 'Quantity': 15.0, 'Gross_Amount': 19.48, 'Fee': 0.0, 'TRY_Amount': 776.25, 'Note': '15 pay x 51,75 TL'},
+        {'Date': '2025-07-09', 'Action': 'BUY', 'Quantity': 2.0, 'Gross_Amount': 2.50, 'Fee': 0.0, 'TRY_Amount': 99.64, 'Note': '2 pay x 49,82 TL (Limit)'},
+        {'Date': '2025-08-14', 'Action': 'BUY', 'Quantity': 12.0, 'Gross_Amount': 14.73, 'Fee': 0.0, 'TRY_Amount': 601.20, 'Note': '12 pay x 50,10 TL (Limit)'},
+        {'Date': '2026-01-14', 'Action': 'SELL', 'Quantity': 39.0, 'Gross_Proceeds': 62.57, 'Fee': 0.0, 'TRY_Amount': 2550.60, 'Note': 'Satış: 39 pay x 65,40 TL = 2.550,60 TL'}
     ],
 
-    # 12. FİZİKİ ALTIN / ONS-GRAM (2 İşlem)
+    # 12. FİZİKİ ALTIN / ONS-GRAM
     'GC=F': [
-        {'Date': '2025-05-22', 'Quantity': 13.15, 'Total_Cost': 1354.0, 'Note': 'Fiziki Altın Alımı (13.15 Gram)'},
-        {'Date': '2026-04-29', 'Quantity': -13.15, 'Total_Cost': -1354.0, 'Realized_Profit': 566.0, 'Note': 'Fiziki Altın Satışı (+566.00$ Realize Kâr)'} 
+        {'Date': '2025-05-22', 'Action': 'BUY', 'Quantity': 13.15, 'Gross_Amount': 1354.0, 'Fee': 0.0, 'Note': 'Fiziki Altın Alımı (13.15 Gram)'},
+        {'Date': '2026-04-29', 'Action': 'SELL', 'Quantity': 13.15, 'Gross_Proceeds': 1920.0, 'Fee': 0.0, 'Note': 'Fiziki Altın Satışı'} 
     ],
 
-    # 13. GRID - NASDAQ CLEAN EDGE SMART GRID ETF (10 İşlem)
+    # 13. GRID - NASDAQ CLEAN EDGE SMART GRID ETF (ABD Borsası: Alım/Satım $1.50 Komisyon, DRIP $0 Komisyon)
     'GRID': [
-        {'Date': '2026-01-26', 'Quantity': 2.524859813, 'Total_Cost': 406.74, 'Note': 'ABD Borsası Alım (Komisyon Dahil)'},
-        {'Date': '2026-02-05', 'Quantity': 1.200408824, 'Total_Cost': 199.99, 'Note': 'ABD Borsası Alım (Komisyon Dahil)'},
-        {'Date': '2026-03-04', 'Quantity': 0.866493185, 'Total_Cost': 150.01, 'Note': 'ABD Borsası Alım (Komisyon Dahil)'},
-        {'Date': '2026-03-31', 'Quantity': 0.0, 'Total_Cost': 0.0, 'Dividend': 0.37, 'Note': 'Nakit Temettü'},
-        {'Date': '2026-04-07', 'Quantity': 0.599059633, 'Total_Cost': 100.37, 'Note': 'ABD Borsası Alım (Komisyon Dahil)'},
-        {'Date': '2026-05-15', 'Quantity': 2.084745762, 'Total_Cost': 400.02, 'Note': 'ABD Borsası Alım (Komisyon Dahil)'},
-        {'Date': '2026-05-18', 'Quantity': -1.318426326, 'Total_Cost': -227.81, 'Realized_Profit': 20.68, 'Note': 'Kısmi Satış (+20.68$ Net Kâr)'},
-        {'Date': '2026-07-01', 'Quantity': 0.019026478, 'Total_Cost': 0.0, 'Dividend': 3.60, 'Note': 'Temettü Yeniden Yatırım (DRIP - 0.019026478 pay)'},
-        {'Date': '2026-08-11', 'Quantity': -1.6055168, 'Total_Cost': -276.53, 'Realized_Profit': 23.46, 'Note': 'Kısmi Satış (+23.46$ Net Kâr)'},
-        {'Date': '2026-09-30', 'Quantity': 0.006980331, 'Total_Cost': 0.0, 'Dividend': 1.24, 'Note': 'Temettü Yeniden Yatırım (DRIP - 0.006980331 pay x $177.65)'}
+        {'Date': '2026-01-26', 'Action': 'BUY', 'Quantity': 2.524859813, 'Gross_Amount': 405.24, 'Fee': 1.50, 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
+        {'Date': '2026-02-05', 'Action': 'BUY', 'Quantity': 1.200408824, 'Gross_Amount': 198.49, 'Fee': 1.50, 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
+        {'Date': '2026-03-04', 'Action': 'BUY', 'Quantity': 0.866493185, 'Gross_Amount': 148.51, 'Fee': 1.50, 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
+        {'Date': '2026-03-31', 'Action': 'DIVIDEND', 'Quantity': 0.0, 'Dividend': 0.37, 'Fee': 0.0, 'Note': 'Nakit Temettü'},
+        {'Date': '2026-04-07', 'Action': 'BUY', 'Quantity': 0.599059633, 'Gross_Amount': 98.87, 'Fee': 1.50, 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
+        {'Date': '2026-05-15', 'Action': 'BUY', 'Quantity': 2.084745762, 'Gross_Amount': 398.52, 'Fee': 1.50, 'Note': 'ABD Borsası Alım ($1.50 Komisyon)'},
+        {'Date': '2026-05-18', 'Action': 'SELL', 'Quantity': 1.318426326, 'Gross_Proceeds': 249.99, 'Fee': 1.50, 'Note': 'Kısmi Satış ($1.50 Komisyon)'},
+        {'Date': '2026-07-01', 'Action': 'DRIP', 'Quantity': 0.019026478, 'Dividend': 3.60, 'Fee': 0.0, 'Note': 'Temettü Geri Yatırımı (DRIP - Komisyonsuz)'},
+        {'Date': '2026-08-11', 'Action': 'SELL', 'Quantity': 1.6055168, 'Gross_Proceeds': 301.49, 'Fee': 1.50, 'Note': 'Kısmi Satış ($1.50 Komisyon)'},
+        {'Date': '2026-09-30', 'Action': 'DRIP', 'Quantity': 0.006980331, 'Dividend': 1.24, 'Fee': 0.0, 'Note': 'Temettü Geri Yatırımı (DRIP - Komisyonsuz x $177.65)'}
     ],
 
-    # 14. ASELSAN (2 Alış, 1 Satış = 3 İşlem)
+    # 14. ASELSAN
     'ASELS.IS': [
-        {'Date': '2026-07-08', 'Quantity': 2.0, 'Total_Cost': 16.17, 'TRY_Amount': 758.00, 'Note': '2 adet x 379,00 TL'},
-        {'Date': '2026-07-09', 'Quantity': 1.0, 'Total_Cost': 7.72, 'TRY_Amount': 361.50, 'Note': '1 adet x 361,50 TL'},
-        {'Date': '2026-09-17', 'Quantity': -3.0, 'Total_Cost': -23.89, 'Realized_Profit': 0.42, 'TRY_Amount': -1139.25, 'Note': 'Satış: 3 pay x 379,75 TL = 1.139,25 TL (Komisyonsuz) | Net Kâr: +19,75 TL'}
+        {'Date': '2026-07-08', 'Action': 'BUY', 'Quantity': 2.0, 'Gross_Amount': 16.17, 'Fee': 0.0, 'TRY_Amount': 758.00, 'Note': '2 adet x 379,00 TL'},
+        {'Date': '2026-07-09', 'Action': 'BUY', 'Quantity': 1.0, 'Gross_Amount': 7.72, 'Fee': 0.0, 'TRY_Amount': 361.50, 'Note': '1 adet x 361,50 TL'},
+        {'Date': '2026-09-17', 'Action': 'SELL', 'Quantity': 3.0, 'Gross_Proceeds': 24.31, 'Fee': 0.0, 'TRY_Amount': 1139.25, 'Note': 'Satış: 3 pay x 379,75 TL (Komisyonsuz)'}
     ],
 
-    # 15. PUSULA PORTFÖY HİSSE SENEDİ FONU (1 Alış, 1 Satış = 2 İşlem)
+    # 15. PUSULA PORTFÖY HİSSE SENEDİ FONU
     'PPS': [
-        {'Date': '2026-08-28', 'Quantity': 352.0, 'Total_Cost': 30.60, 'TRY_Amount': 1444.47, 'Note': '352 pay x 4.103595 TL'},
-        {'Date': '2026-09-07', 'Quantity': -352.0, 'Total_Cost': -30.60, 'Realized_Profit': -9.65, 'TRY_Amount': -992.16, 'Note': 'Satış: 352 pay x 2.818639 TL = 992,16 TL | Net Zarar: -452,30 TL (-%31.31)'}
+        {'Date': '2026-08-28', 'Action': 'BUY', 'Quantity': 352.0, 'Gross_Amount': 30.60, 'Fee': 0.0, 'TRY_Amount': 1444.47, 'Note': '352 pay x 4.103595 TL'},
+        {'Date': '2026-09-07', 'Action': 'SELL', 'Quantity': 352.0, 'Gross_Proceeds': 20.95, 'Fee': 0.0, 'TRY_Amount': 992.16, 'Note': 'Satış: 352 pay x 2.818639 TL'}
     ],
 
-    # 16. MİDAS NEMALANDIRMA GELİRLERİ - USD & TL (4 İşlem)
+    # 16. MİDAS NEMALANDIRMA GELİRLERİ - USD & TL
     'USD_NEMA': [
-        {'Date': '2026-04-30', 'Quantity': 0.0, 'Total_Cost': 0.0, 'Dividend': 0.04, 'Note': 'Nisan 2026 USD Nema (%3 Oran)'},
-        {'Date': '2026-05-29', 'Quantity': 0.0, 'Total_Cost': 0.0, 'Dividend': 0.33, 'Note': 'Mayıs 2026 USD Nema (%3 Oran)'},
-        {'Date': '2026-08-27', 'Quantity': 0.0, 'Total_Cost': 0.0, 'Dividend': 0.02, 'TRY_Amount': 1.12, 'Note': 'TL Fon Nema: Brüt 1,36 TL | Stopaj: -0,24 TL | Net: 1,12 TL (Günlük %0,09)'},
-        {'Date': '2026-08-31', 'Quantity': 0.0, 'Total_Cost': 0.0, 'Dividend': 0.06, 'Note': 'Ağustos 2026 USD Nema (%3 Oran)'}
+        {'Date': '2026-04-30', 'Action': 'DIVIDEND', 'Quantity': 0.0, 'Dividend': 0.04, 'Fee': 0.0, 'Note': 'Nisan 2026 USD Nema (%3 Oran)'},
+        {'Date': '2026-05-29', 'Action': 'DIVIDEND', 'Quantity': 0.0, 'Dividend': 0.33, 'Fee': 0.0, 'Note': 'Mayıs 2026 USD Nema (%3 Oran)'},
+        {'Date': '2026-08-27', 'Action': 'DIVIDEND', 'Quantity': 0.0, 'Dividend': 0.02, 'Fee': 0.0, 'TRY_Amount': 1.12, 'Note': 'TL Fon Nema: Brüt 1,36 TL | Stopaj: -0,24 TL | Net: 1,12 TL'},
+        {'Date': '2026-08-31', 'Action': 'DIVIDEND', 'Quantity': 0.0, 'Dividend': 0.06, 'Fee': 0.0, 'Note': 'Ağustos 2026 USD Nema (%3 Oran)'}
     ]
 }
 
-NON_YF_TICKERS = {'IOG', 'YKT', 'IVY', 'YAS', 'TMG', 'AFA', 'HMG', 'HSL', 'PPS', 'USD_NEMA'}
+# ==============================================================================
+# OTOMATİK MALİYET VE KÂR HESAPLAMA MOTORU (WEIGHTED AVERAGE COST / AUTO-LEDGER)
+# ==============================================================================
+def run_accounting_engine(raw_tx_dict):
+    """
+    Ham alım/satım/temettü verilerini okur; ABD borsası $1.50 komisyon kuralını,
+    DRIP $0 komisyon kuralını ve kısmi satışlardaki ağırlıklı ortalama maliyet
+    düşümünü otomatik hesaplayarak işlenmiş muhasebe defterini üretir.
+    """
+    processed_dict = {}
+    
+    for ticker, raw_list in raw_tx_dict.items():
+        # İşlemleri tarihe göre sırala (aynı gün içinde önce BUY/DRIP, sonra SELL)
+        action_priority = {'BUY': 1, 'DRIP': 2, 'DIVIDEND': 3, 'SELL': 4}
+        sorted_txs = sorted(
+            raw_list, 
+            key=lambda x: (pd.to_datetime(x['Date']), action_priority.get(x.get('Action', 'BUY'), 5))
+        )
+        
+        running_qty = 0.0
+        running_cost = 0.0
+        processed_list = []
+        
+        for tx in sorted_txs:
+            action = tx.get('Action', 'BUY').upper()
+            date_str = tx['Date']
+            qty = abs(float(tx.get('Quantity', 0.0)))
+            try_amt = tx.get('TRY_Amount', None)
+            note = tx.get('Note', '')
+            
+            # Komisyon Kuralı: ABD hisselerinde BUY/SELL için varsayılan $1.50, DRIP/DIVIDEND için $0.00
+            if 'Fee' in tx:
+                fee = float(tx['Fee'])
+            else:
+                if ticker in US_STOCK_TICKERS and action in ('BUY', 'SELL'):
+                    fee = US_DEFAULT_FEE
+                else:
+                    fee = 0.0
+                    
+            if action == 'BUY':
+                gross_amt = float(tx.get('Gross_Amount', tx.get('Total_Cost', 0.0) - fee))
+                total_cost_added = round(gross_amt + fee, 4)
+                
+                running_qty += qty
+                running_cost += total_cost_added
+                avg_cost_now = running_cost / running_qty if running_qty > 0 else 0.0
+                
+                processed_list.append({
+                    'Date': date_str,
+                    'Action': 'BUY',
+                    'Quantity': qty,
+                    'Total_Cost': total_cost_added,
+                    'Realized_Profit': 0.0,
+                    'Dividend': 0.0,
+                    'Fee': fee,
+                    'Sell_Ratio_Pct': 0.0,
+                    'Running_Qty': running_qty,
+                    'Running_Avg_Cost': avg_cost_now,
+                    'TRY_Amount': try_amt,
+                    'Note': note
+                })
+                
+            elif action == 'DRIP':
+                # Temettü geri yatırımı: Komisyon $0, cebinden çıkan ana para $0, pay adedi artar, ort. maliyet düşer!
+                div_amt = float(tx.get('Dividend', 0.0))
+                running_qty += qty
+                avg_cost_now = running_cost / running_qty if running_qty > 0 else 0.0
+                
+                processed_list.append({
+                    'Date': date_str,
+                    'Action': 'DRIP',
+                    'Quantity': qty,
+                    'Total_Cost': 0.0,
+                    'Realized_Profit': 0.0,
+                    'Dividend': div_amt,
+                    'Fee': 0.0,
+                    'Sell_Ratio_Pct': 0.0,
+                    'Running_Qty': running_qty,
+                    'Running_Avg_Cost': avg_cost_now,
+                    'TRY_Amount': try_amt,
+                    'Note': note
+                })
+                
+            elif action == 'SELL':
+                # Satış öncesi ağırlıklı ortalama maliyet ve satılan pay oranı (%)
+                avg_cost_before_sale = running_cost / running_qty if running_qty > 0 else 0.0
+                sell_ratio = (qty / running_qty) if running_qty > 0 else 1.0
+                sell_ratio = min(sell_ratio, 1.0)
+                
+                # Düşülecek maliyet (Tam satışsa kalan tüm maliyeti kapat, kısmi satışsa oransal düş)
+                if abs(running_qty - qty) < 1e-6:
+                    cost_removed = round(running_cost, 2)
+                else:
+                    cost_removed = round(running_cost * sell_ratio, 2)
+                    
+                gross_proceeds = float(tx.get('Gross_Proceeds', 0.0))
+                net_proceeds = round(gross_proceeds - fee, 2)
+                realized_pnl = round(net_proceeds - cost_removed, 2)
+                
+                running_qty -= qty
+                running_cost = round(running_cost - cost_removed, 2)
+                if running_qty < 1e-6:
+                    running_qty = 0.0
+                    running_cost = 0.0
+                    
+                avg_cost_after = running_cost / running_qty if running_qty > 0 else avg_cost_before_sale
+                
+                processed_list.append({
+                    'Date': date_str,
+                    'Action': 'SELL',
+                    'Quantity': -qty,
+                    'Total_Cost': -cost_removed,
+                    'Realized_Profit': realized_pnl,
+                    'Dividend': 0.0,
+                    'Fee': fee,
+                    'Gross_Proceeds': gross_proceeds,
+                    'Net_Proceeds': net_proceeds,
+                    'Sell_Ratio_Pct': sell_ratio * 100.0,
+                    'Running_Qty': running_qty,
+                    'Running_Avg_Cost': avg_cost_after,
+                    'TRY_Amount': -abs(try_amt) if try_amt is not None else None,
+                    'Note': note
+                })
+                
+            elif action == 'DIVIDEND':
+                div_amt = float(tx.get('Dividend', 0.0)) - fee
+                avg_cost_now = running_cost / running_qty if running_qty > 0 else 0.0
+                processed_list.append({
+                    'Date': date_str,
+                    'Action': 'DIVIDEND',
+                    'Quantity': 0.0,
+                    'Total_Cost': 0.0,
+                    'Realized_Profit': 0.0,
+                    'Dividend': div_amt,
+                    'Fee': fee,
+                    'Sell_Ratio_Pct': 0.0,
+                    'Running_Qty': running_qty,
+                    'Running_Avg_Cost': avg_cost_now,
+                    'TRY_Amount': try_amt,
+                    'Note': note
+                })
+                
+        processed_dict[ticker] = processed_list
+        
+    return processed_dict
+
+# Motoru çalıştır ve tüm işlemleri otomatik hesapla
+portfolio_transactions = run_accounting_engine(raw_portfolio_transactions)
 
 # --- SIDEBAR (TERMİNAL KONTROL PANELİ) ---
 with st.sidebar:
@@ -348,7 +493,6 @@ def fetch_portfolio_data(transactions_dict):
     results = []
     errors = []
     
-    # Anlık USD/TRY kurunu çek
     try:
         usd_try_rate = float(yf.Ticker("USDTRY=X").fast_info.last_price)
         if pd.isna(usd_try_rate) or usd_try_rate <= 0:
@@ -360,7 +504,6 @@ def fetch_portfolio_data(transactions_dict):
         except Exception:
             usd_try_rate = 46.85
 
-    # Piyasa Bandı (Market Ticker) İçin Endeks Fiyatları
     market_Pulse = {'USDTRY': usd_try_rate, 'GOLD_GRAM_USD': 0.0, 'SP500': 0.0, 'BIST100': 0.0}
     try:
         g_fast = yf.Ticker("GC=F").fast_info.last_price
@@ -385,6 +528,7 @@ def fetch_portfolio_data(transactions_dict):
             total_invested_ever = sum(tx.get('Total_Cost', 0.0) for tx in txs if tx.get('Total_Cost', 0.0) > 0)
             realized_profit = sum(tx.get('Realized_Profit', 0.0) for tx in txs)
             dividends = sum(tx.get('Dividend', 0.0) for tx in txs)
+            total_fees_paid = sum(tx.get('Fee', 0.0) for tx in txs)
             cash_dividends = sum(tx.get('Dividend', 0.0) for tx in txs if tx.get('Quantity', 0.0) == 0)
             
             is_closed = abs(total_quantity) < 1e-6
@@ -413,6 +557,7 @@ def fetch_portfolio_data(transactions_dict):
                     'Unrealized P/L (%)': 0.0,
                     'Realized P/L': float(realized_profit),
                     'Dividends': float(dividends),
+                    'Fees & Tax': float(total_fees_paid),
                     'Total Net Return': total_net_ret,
                     'Total ROI (%)': float(total_roi_pct)
                 })
@@ -482,6 +627,7 @@ def fetch_portfolio_data(transactions_dict):
                 'Unrealized P/L (%)': float(pnl_percentage),
                 'Realized P/L': float(realized_profit),
                 'Dividends': float(dividends),
+                'Fees & Tax': float(total_fees_paid),
                 'Total Net Return': total_net_ret,
                 'Total ROI (%)': float(total_roi_pct)
             })
@@ -631,7 +777,6 @@ def fetch_historical_chart_data(transactions_dict, benchmark_ticker=None):
 
     return df_history
 
-# --- YARDIMCI FORMAT FONKSİYONU ---
 def fmt_currency(val, sym):
     sign = "-" if val < -1e-6 else ("+" if val > 1e-6 else "")
     return f"{sign}{sym}{abs(val):,.2f}"
@@ -653,6 +798,7 @@ total_tx_count = sum(len(v) for v in portfolio_transactions.values())
 st.markdown(f"""
 <div class="ticker-bar">
     <div class="ticker-item"><span class="ticker-label">TERMINAL</span><span class="ticker-val" style="color:#2962FF;">LIVE PORTFOLIO PRO</span></div>
+    <div class="ticker-item"><span class="ticker-label">ENGINE</span><span class="ticker-val" style="color:#00E676;">AUTO-WAC ACTIVE</span></div>
     <div class="ticker-item"><span class="ticker-label">USD/TRY</span><span class="ticker-val">₺{usd_try_rate:,.2f}</span></div>
     <div class="ticker-item"><span class="ticker-label">GRAM ALTIN</span><span class="ticker-val">${market_pulse['GOLD_GRAM_USD']:,.2f} (₺{market_pulse['GOLD_GRAM_USD']*usd_try_rate:,.2f})</span></div>
     <div class="ticker-item"><span class="ticker-label">S&P 500</span><span class="ticker-val">{market_pulse['SP500']:,.2f}</span></div>
@@ -670,7 +816,7 @@ if results:
     
     money_cols = [
         'Avg. Cost', 'Current Price', 'Daily P/L', 'Total Cost', 
-        'Current Value', 'Unrealized P/L', 'Realized P/L', 'Dividends', 'Total Net Return'
+        'Current Value', 'Unrealized P/L', 'Realized P/L', 'Dividends', 'Fees & Tax', 'Total Net Return'
     ]
     for col in money_cols:
         df[col] = df[col] * fx_multiplier
@@ -704,7 +850,7 @@ if results:
         <div class="kpi-card">
             <div class="kpi-title">Aktif Yatırım Maliyeti</div>
             <div class="kpi-value">{curr_symbol}{total_invested:,.2f}</div>
-            <div class="kpi-sub neu-badge">Açık Pozisyon Ana Parası</div>
+            <div class="kpi-sub neu-badge">Otomatik Ortalama Maliyet</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-title">Açık Kâr / Zarar</div>
@@ -714,12 +860,12 @@ if results:
         <div class="kpi-card">
             <div class="kpi-title">Realize Kâr (Satışlar)</div>
             <div class="kpi-value">{fmt_currency(realized_pnl, curr_symbol)}</div>
-            <div class="kpi-sub {real_cls}">Vergi & Komisyon Sonrası Net</div>
+            <div class="kpi-sub {real_cls}">Otomatik Hesaplanan Net</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-title">Temettü & Nema Geliri</div>
             <div class="kpi-value">{curr_symbol}{total_dividends:,.2f}</div>
-            <div class="kpi-sub pos-badge">Pasif Nakit & DRIP</div>
+            <div class="kpi-sub pos-badge">Pasif Nakit & DRIP ($0 Kom.)</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-title">Tüm Zamanlar Net Kâr</div>
@@ -729,13 +875,34 @@ if results:
     </div>
     """, unsafe_allow_html=True)
 
-    # --- SEKMELİ GÖRÜNÜM (EMOJİSİZ KURUMSAL BAŞLIKLAR) ---
-    tab1, tab2, tab3, tab4 = st.tabs([
+    # --- SEKMELİ GÖRÜNÜM ---
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "PORTFÖY VE VARLIK ÖZETİ", 
         "PERFORMANS VE ANALİTİK", 
         "TEKNİK ANALİZ TERMİNALİ",
+        "MUHASEBE MOTORU & SİMÜLATÖR",
         f"İŞLEM DEFTERİ ({total_tx_count} KAYIT)"
     ])
+
+    # Tablo Renklendirme Yardımcıları
+    pnl_color_cols = [
+        'Daily Change (%)', 'Daily P/L', 'Unrealized P/L', 
+        'Unrealized P/L (%)', 'Realized P/L', 'Total Net Return', 'Total ROI (%)'
+    ]
+    
+    def style_pnl_cells(val):
+        if pd.isna(val):
+            return ''
+        if val > 1e-6:
+            return 'color: #00E676; font-weight: 600;'
+        elif val < -1e-6:
+            return 'color: #FF3B69; font-weight: 600;'
+        return 'color: #848E9C;'
+
+    def style_status_cells(val):
+        if val == 'AÇIK':
+            return 'color: #2962FF; font-weight: 700;'
+        return 'color: #848E9C;'
 
     # ================= SEKME 1: VARLIKLAR VE PASTA GRAFİĞİ =================
     with tab1:
@@ -743,26 +910,6 @@ if results:
         df_display = df_display.sort_values(by=['Status', 'Total Net Return'], ascending=[True, False])
         
         st.markdown("#### Portföy ve Geçmiş Yatırımlar Özeti")
-        
-        # Tablo içi Yeşil / Kırmızı Koşullu Renklendirme Fonksiyonu
-        pnl_color_cols = [
-            'Daily Change (%)', 'Daily P/L', 'Unrealized P/L', 
-            'Unrealized P/L (%)', 'Realized P/L', 'Total Net Return', 'Total ROI (%)'
-        ]
-        
-        def style_pnl_cells(val):
-            if pd.isna(val):
-                return ''
-            if val > 1e-6:
-                return 'color: #00E676; font-weight: 600;'
-            elif val < -1e-6:
-                return 'color: #FF3B69; font-weight: 600;'
-            return 'color: #848E9C;'
-
-        def style_status_cells(val):
-            if val == 'AÇIK':
-                return 'color: #2962FF; font-weight: 700;'
-            return 'color: #848E9C;'
 
         try:
             styled_table = (
@@ -892,7 +1039,6 @@ if results:
                 
             df_hist_filtered = df_history[df_history.index >= start_dt].copy()
 
-            # TradingView Crosshair Ayarı
             tv_xaxis = dict(
                 showspikes=True, spikemode='across', spikesnap='cursor', 
                 spikecolor='#848E9C', spikethickness=1, spikedash='dash',
@@ -904,7 +1050,6 @@ if results:
                 gridcolor='rgba(255,255,255,0.05)'
             )
 
-            # 1. GRAFİK: Varlık Büyüklüğü vs Yatırılan Maliyet
             st.markdown("#### Aktif Portföy Değeri ve Yatırılan Ana Para")
             fig_value = go.Figure()
             fig_value.add_trace(go.Scatter(
@@ -935,7 +1080,6 @@ if results:
             )
             st.plotly_chart(fig_value, use_container_width=True)
 
-            # 2. GRAFİK: Kümülatif Net Kâr Evrimi
             st.markdown("---")
             st.markdown("#### Kümülatif Net Kâr Evrimi (Realize Kârlar + Açık Kâr + Temettü & Nema)")
             fig_profit = go.Figure()
@@ -959,7 +1103,6 @@ if results:
             )
             st.plotly_chart(fig_profit, use_container_width=True)
 
-            # 3. GRAFİK: Yüzdelik Getiri
             st.markdown("---")
             st.markdown("#### Aktif Portföy Getirisi (%) ve Benchmark Kıyaslaması")
             fig_pct = go.Figure()
@@ -1065,7 +1208,6 @@ if results:
                         name='SMA 50', line=dict(color='#00B0FF', width=1.5)
                     ))
 
-                # Kullanıcının Gerçek Alım/Satım Noktalarını Grafik Üzerinde Göster
                 if "İşlem Noktalarım" in show_sma and selected_ta_ticker in portfolio_transactions:
                     buy_dates, buy_prices = [], []
                     sell_dates, sell_prices = [], []
@@ -1083,7 +1225,7 @@ if results:
 
                     if buy_dates:
                         fig_ta.add_trace(go.Scatter(
-                            x=buy_dates, y=buy_prices, mode='markers', name='ALIM (BUY)',
+                            x=buy_dates, y=buy_prices, mode='markers', name='ALIM (BUY/DRIP)',
                             marker=dict(symbol='triangle-up', size=13, color='#00E676', line=dict(width=1, color='#000000'))
                         ))
                     if sell_dates:
@@ -1110,9 +1252,94 @@ if results:
         except Exception as e:
             st.error(f"Teknik analiz grafiği yüklenirken hata: {str(e)}")
 
-    # ================= SEKME 4: İŞLEM GEÇMİŞİ LOGU =================
+    # ================= SEKME 4: OTOMATİK MUHASEBE MOTORU & SİMÜLATÖR =================
     with tab4:
-        st.markdown("#### Tüm İşlem Kayıtları (Tarih Sıralı Muhasebe Dökümü)")
+        st.markdown("#### Otomatik Ağırlıklı Ortalama Maliyet & Kısmi Satış Simülatörü")
+        st.caption("ABD borsası işlemlerinde $1.50 işlem ücreti ve DRIP işlemlerinde $0 komisyon kuralları motor tarafından otomatik uygulanır.")
+
+        sim_col1, sim_col2 = st.columns([1.1, 1.3])
+        
+        # Mevcut GRID pozisyonunun motor tarafından hesaplanan güncel değerleri
+        grid_row = df[df['Ticker'] == 'GRID'].iloc[0]
+        cur_grid_qty = float(grid_row['Quantity'])
+        cur_grid_cost_usd = float(grid_row['Total Cost']) / fx_multiplier
+        cur_grid_avg_usd = float(grid_row['Avg. Cost']) / fx_multiplier
+        cur_grid_price_usd = float(grid_row['Current Price']) / fx_multiplier
+
+        with sim_col1:
+            st.markdown("##### Canlı Kısmi Satış / Alım Test Aracı (`GRID`)")
+            sim_action = st.radio("Simülasyon İşlem Tipi", options=["Kısmi Satış (SELL)", "Yeni Alım (BUY)", "Temettü Geri Yatırımı (DRIP)"], horizontal=True)
+            
+            if "SELL" in sim_action:
+                sell_pct = st.slider("Satılacak Pozisyon Oranı (%)", min_value=5, max_value=100, value=25, step=5)
+                sim_exec_price = st.number_input("Satış Fiyatı ($)", value=round(cur_grid_price_usd, 2), step=1.0)
+                sim_fee = st.number_input("ABD Borsası Komisyonu ($)", value=1.50, step=0.50)
+                
+                qty_to_sell = cur_grid_qty * (sell_pct / 100.0)
+                gross_proc = qty_to_sell * sim_exec_price
+                net_proc = gross_proc - sim_fee
+                auto_cost_removed = cur_grid_cost_usd * (sell_pct / 100.0)
+                auto_realized_profit = net_proc - auto_cost_removed
+                rem_qty = cur_grid_qty - qty_to_sell
+                rem_cost = cur_grid_cost_usd - auto_cost_removed
+                
+                st.info(
+                    f"**Motor Hesaplama Sonucu:**\n"
+                    f"- **Satılacak Adet:** `{qty_to_sell:.6f} pay` (Mevcut `{cur_grid_qty:.4f}` payın `%{sell_pct}`'i)\n"
+                    f"- **Brüt Satış Tutarı:** `${gross_proc:,.2f}` | **Komisyon:** `-${sim_fee:,.2f}` | **Net Tutar:** `${net_proc:,.2f}`\n"
+                    f"- **Otomatik Düşülen Maliyet:** `-${auto_cost_removed:,.2f}` (Pay başı `${cur_grid_avg_usd:,.2f}` ortalamadan)\n"
+                    f"- **Otomatik Realize Net Kâr:** **`{fmt_currency(auto_realized_profit, '$')}`**\n"
+                    f"- **İşlem Sonrası Kalan:** `{rem_qty:.4f} pay` | **Kalan Aktif Maliyet:** `${rem_cost:,.2f}`"
+                )
+            elif "BUY" in sim_action:
+                buy_usd = st.number_input("Alım Tutarı (Komisyon Hariç $)", value=200.0, step=25.0)
+                sim_exec_price = st.number_input("Alım Fiyatı ($)", value=round(cur_grid_price_usd, 2), step=1.0)
+                sim_fee = st.number_input("ABD Borsası Komisyonu ($)", value=1.50, step=0.50)
+                
+                qty_bought = buy_usd / sim_exec_price if sim_exec_price > 0 else 0.0
+                total_cost_added = buy_usd + sim_fee
+                new_qty = cur_grid_qty + qty_bought
+                new_cost = cur_grid_cost_usd + total_cost_added
+                new_avg = new_cost / new_qty if new_qty > 0 else 0.0
+                
+                st.info(
+                    f"**Motor Hesaplama Sonucu:**\n"
+                    f"- **Alınan Pay:** `+{qty_bought:.6f} pay` | **Maliyete Eklenen (+$1.50 Komisyon Dahil):** `+${total_cost_added:,.2f}`\n"
+                    f"- **Eski Ortalama Maliyet:** `${cur_grid_avg_usd:,.2f}` ➡️ **Yeni Ortalama Maliyet:** **`${new_avg:,.2f}`**\n"
+                    f"- **Yeni Toplam Pay:** `{new_qty:.4f} pay` | **Yeni Aktif Maliyet:** `${new_cost:,.2f}`"
+                )
+            else:
+                drip_usd = st.number_input("Yatan Temettü Tutarı ($)", value=3.50, step=0.50)
+                sim_exec_price = st.number_input("DRIP Alım Fiyatı ($)", value=round(cur_grid_price_usd, 2), step=1.0)
+                
+                qty_drip = drip_usd / sim_exec_price if sim_exec_price > 0 else 0.0
+                new_qty = cur_grid_qty + qty_drip
+                new_avg = cur_grid_cost_usd / new_qty if new_qty > 0 else 0.0
+                
+                st.info(
+                    f"**Motor Hesaplama Sonucu (DRIP - $0.00 Komisyon):**\n"
+                    f"- **Eklenen Bedelsiz Pay:** `+{qty_drip:.6f} pay` | **Komisyon:** `$0.00 (Ücretsiz)`\n"
+                    f"- **Cebinden Çıkan Ek Maliyet:** `$0.00`\n"
+                    f"- **Eski Ortalama Maliyet:** `${cur_grid_avg_usd:,.2f}` ➡️ **Yeni Düşürülmüş Ortalama Maliyet:** **`${new_avg:,.2f}`**"
+                )
+
+        with sim_col2:
+            st.markdown("##### Yeni İşlem Eklerken Kullanacağın Basit Şablon")
+            st.code("""# Artık satışlarda maliyet düşümü veya kâr hesabı yapmana gerek yok!
+# Sadece aşağıdaki 3 satırdan uygun olanı raw_portfolio_transactions içine ekle:
+
+# 1. ABD Borsası Normal Alım ($1.50 komisyonu motor otomatik maliyete ekler):
+{'Date': '2026-10-20', 'Action': 'BUY', 'Quantity': 1.25, 'Gross_Amount': 225.00, 'Fee': 1.50, 'Note': 'GRID Alım'}
+
+# 2. ABD Borsası Kısmi Satış (Düşülecek maliyeti ve Realized_Profit'i motor otomatik hesaplar):
+{'Date': '2026-11-05', 'Action': 'SELL', 'Quantity': 0.85, 'Gross_Proceeds': 165.00, 'Fee': 1.50, 'Note': 'Kısmi Satış'}
+
+# 3. Temettü Geri Yatırımı - DRIP (Komisyon $0, ortalama maliyeti otomatik düşürür):
+{'Date': '2026-12-31', 'Action': 'DRIP', 'Quantity': 0.015, 'Dividend': 2.80, 'Fee': 0.0, 'Note': 'DRIP Yatırımı'}""", language="python")
+
+    # ================= SEKME 5: İŞLEM GEÇMİŞİ LOGU (MOTOR ÇIKTISI) =================
+    with tab5:
+        st.markdown("#### Muhasebe Motoru İşlem Defteri (Otomatik Maliyet & Kâr Dökümü)")
         
         filter_asset = st.selectbox(
             "Varlığa Göre Filtrele",
@@ -1126,32 +1353,38 @@ if results:
                 continue
                 
             for tx in txs:
+                action = tx.get('Action', 'BUY')
                 q = tx.get('Quantity', 0.0)
                 c = tx.get('Total_Cost', 0.0)
                 r = tx.get('Realized_Profit', 0.0)
                 d = tx.get('Dividend', 0.0)
+                fee = tx.get('Fee', 0.0)
+                sell_ratio = tx.get('Sell_Ratio_Pct', 0.0)
+                running_avg = tx.get('Running_Avg_Cost', 0.0)
                 try_amt = tx.get('TRY_Amount', None)
                 note = tx.get('Note', '')
                 
-                if d > 0 and q == 0:
+                if action == 'DIVIDEND':
                     tx_type = "DIVIDEND / NEMA"
-                elif d > 0 and q > 0:
+                elif action == 'DRIP':
                     tx_type = "DRIP (TEMETTÜ YATIRIMI)"
-                elif q > 0:
+                elif action == 'BUY':
                     tx_type = "BUY (ALIM)"
                 else:
-                    tx_type = "SELL (SATIM)"
+                    tx_type = f"SELL (%{sell_ratio:.1f} SATIŞ)"
                     
                 tx_rows.append({
                     'Tarih': tx['Date'],
                     'Varlık': asset_label,
                     'İşlem Tipi': tx_type,
                     'Miktar / Pay': q,
-                    f'Tutar ({curr_symbol})': c * fx_multiplier,
-                    'Orijinal TL Tutarı (₺)': f"₺{abs(try_amt):,.2f}" if try_amt is not None else "-",
-                    f'Realize Net Kâr ({curr_symbol})': r * fx_multiplier,
+                    f'Maliyet Değişimi ({curr_symbol})': c * fx_multiplier,
+                    f'İşlem Sonrası Ort. Maliyet ({curr_symbol})': running_avg * fx_multiplier,
+                    f'Komisyon / Stopaj ({curr_symbol})': fee * fx_multiplier,
+                    f'Otomatik Realize Kâr ({curr_symbol})': r * fx_multiplier,
                     f'Temettü/Nema ({curr_symbol})': d * fx_multiplier,
-                    'İşlem Detayı & Vergi/Komisyon Notu': note
+                    'Orijinal TL (₺)': f"₺{abs(try_amt):,.2f}" if try_amt is not None else "-",
+                    'Not': note
                 })
         
         df_tx_log = pd.DataFrame(tx_rows).sort_values('Tarih', ascending=False)
@@ -1169,13 +1402,13 @@ if results:
             styled_log = (
                 df_tx_log.style
                 .map(style_tx_type, subset=['İşlem Tipi'])
-                .map(style_pnl_cells, subset=[f'Realize Net Kâr ({curr_symbol})'])
+                .map(style_pnl_cells, subset=[f'Otomatik Realize Kâr ({curr_symbol})'])
             )
         except AttributeError:
             styled_log = (
                 df_tx_log.style
                 .applymap(style_tx_type, subset=['İşlem Tipi'])
-                .applymap(style_pnl_cells, subset=[f'Realize Net Kâr ({curr_symbol})'])
+                .applymap(style_pnl_cells, subset=[f'Otomatik Realize Kâr ({curr_symbol})'])
             )
 
         st.dataframe(styled_log, use_container_width=True, hide_index=True)
