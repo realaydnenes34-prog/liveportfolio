@@ -4,13 +4,23 @@ on:
   schedule:
     # Her 6 saatte bir otomatik çalışır
     - cron: '0 */6 * * *'
-  workflow_dispatch: # İstersen manuel de tetikleyebilirsin
+  workflow_dispatch:
 
 jobs:
   ping-app:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Streamlit App
+      - name: Ping Streamlit App & Health Endpoint
         run: |
-          curl -s -L "https://liveportfolio-nrz2hoaefq3rzmvrnsmzvy.streamlit.app/" > /dev/null
-          echo "Ping gönderildi, uygulama uyanık!"
+          APP_URL="https://liveportfolio-nrz2hoaefq3rzmvrnsmzvy.streamlit.app"
+          
+          # 1. Streamlit dahili sağlık kontrolü uç noktasını uyandır
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L --cookie-jar cookies.txt --max-redirs 10 "$APP_URL/_stcore/health")
+          echo "Health check HTTP status: $STATUS"
+          
+          # 2. Ana sayfaya tarayıcı kimliği (User-Agent) ve çerezle istek gönder
+          curl -s -L --cookie cookies.txt --cookie-jar cookies.txt --max-redirs 10 \
+            -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36" \
+            "$APP_URL/" > /dev/null || true
+            
+          echo "Ping başarıyla tamamlandı, uygulama uyanık!"
