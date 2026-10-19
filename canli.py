@@ -1058,7 +1058,6 @@ if results:
             max_v = max(df_bar['Total Net Return'].max(), 10.0)
             min_v = min(df_bar['Total Net Return'].min(), -10.0)
             
-            # Etiketlerin çubuk dışına taşarken varlık isimleriyle asla çakışmaması için sabit sağ konumlandırma
             bar_texts = [
                 f"  {fmt_currency(v, curr_symbol)} ({r:+.1f}%)" if abs(r) > 0.01 else f"  {fmt_currency(v, curr_symbol)}"
                 for v, r in zip(df_bar['Total Net Return'], df_bar['Total ROI (%)'])
@@ -1069,14 +1068,28 @@ if results:
                 y=df_bar['Asset'],
                 orientation='h',
                 marker_color=bar_colors,
-                text=bar_texts,
-                textposition='outside',
-                cliponaxis=False,
-                textfont=dict(size=11, family="SF Mono, Roboto Mono, monospace")
+                hovertemplate=f"<b>%{{y}}</b><br>Net Kâr: {curr_symbol}%{{x:,.2f}}<extra></extra>"
             ))
+            
+            fig_bar.add_trace(go.Scatter(
+                x=[max(v, 0.0) for v in df_bar['Total Net Return']],
+                y=df_bar['Asset'],
+                mode='text',
+                text=bar_texts,
+                textposition='middle right',
+                textfont=dict(
+                    size=11,
+                    family="SF Mono, Roboto Mono, monospace",
+                    color=['#FF1744' if v < 0 else '#848E9C' for v in df_bar['Total Net Return']]
+                ),
+                hoverinfo='skip',
+                cliponaxis=False
+            ))
+            
             fig_bar.update_layout(
                 autosize=True,
                 height=520,
+                showlegend=False,
                 bargap=0.26,
                 xaxis_title=f"Toplam Net Kâr ({curr_symbol})",
                 yaxis_title="",
@@ -1084,7 +1097,7 @@ if results:
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
                 xaxis=dict(
-                    range=[min_v * 1.45, max_v * 1.32],
+                    range=[min_v * 3.5, max_v * 1.32],
                     gridcolor='rgba(132, 142, 156, 0.15)',
                     zeroline=True,
                     zerolinecolor='rgba(132, 142, 156, 0.4)',
